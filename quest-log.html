@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quest Log — Gamified Tasks</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0c0c14;
+    --surface: #13131f;
+    --surface-2: #1b1b2c;
+    --border: #2a2a42;
+    --text: #e4e4f0;
+    --text-dim: #64648a;
+    --xp: #a78bfa;
+    --xp-glow: rgba(167, 139, 250, 0.35);
+    --gold: #fbbf24;
+    --gold-glow: rgba(251, 191, 36, 0.3);
+    --streak: #f97316;
+    --streak-glow: rgba(249, 115, 22, 0.3);
+    --hp: #34d399;
+    --hp-glow: rgba(52, 211, 153, 0.3);
+    --crit: #f472b6;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f3f1f8;
+      --surface: #ffffff;
+      --surface-2: #ede9f5;
+      --border: #d8d4e4;
+      --text: #1a1a2e;
+      --text-dim: #7a7a9a;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .quest-panel {
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .quest-panel::before {
+    content: '';
+    position: absolute;
+    top: -80%;
+    right: -40%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, var(--xp-glow) 0%, transparent 60%);
+    opacity: 0.12;
+    pointer-events: none;
+  }
+
+  /* ─── AVATAR & LEVEL ─── */
+  .hero-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--xp), var(--crit));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px var(--xp-glow);
+    position: relative;
+  }
+
+  .level-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    background: var(--gold);
+    color: #000;
+    font-size: 10px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 2px solid var(--surface);
+  }
+
+  .hero-info { flex: 1; }
+
+  .hero-title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-class {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+  }
+
+  .streak-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    flex-shrink: 0;
+  }
+
+  .streak-flame { font-size: 18px; animation: flicker 0.8s ease infinite alternate; }
+  @keyframes flicker {
+    from { transform: scale(1) rotate(-3deg); }
+    to { transform: scale(1.1) rotate(3deg); }
+  }
+
+  .streak-num {
+    font-size: 20px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--streak);
+    line-height: 1;
+  }
+
+  .streak-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ─── XP BAR ─── */
+  .xp-section {
+    margin-bottom: 20px;
+  }
+
+  .xp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+
+  .xp-text {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+  }
+
+  .xp-text span { color: var(--xp); font-weight: 600; }
+
+  .xp-bar-track {
+    width: 100%;
+    height: 14px;
+    background: var(--surface-2);
+    border-radius: 7px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+
+  .xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--xp), var(--crit));
+    border-radius: 7px;
+    width: 0%;
+    transition: width 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: 0 0 12px var(--xp-glow);
+  }
+
+  .xp-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 30px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25));
+    border-radius: 7px;
+    animation: shimmer 1.5s ease infinite;
+  }
+
+  @keyframes shimmer {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+  }
+
+  /* ─── STAT CHIPS ─── */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .stat-chip {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .stat-chip-icon { font-size: 16px; margin-bottom: 4px; }
+
+  .stat-chip-val {
+    font-size: 18px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+  }
+
+  .stat-chip-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ─── QUEST LIST ─── */
+  .quest-list-header {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .quest-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 6px;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: quest-in 0.4s ease forwards;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .quest-item.done {
+    opacity: 0.55;
+  }
+
+  .quest-item.done::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--hp-glow), transparent);
+    opacity: 0.15;
+    pointer-events: none;
+  }
+
+  @keyframes quest-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quest-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    color: transparent;
+  }
+
+  .quest-item.done .quest-check {
+    background: var(--hp);
+    border-color: var(--hp);
+    color: #fff;
+  }
+
+  .quest-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .quest-item.done .quest-name {
+    text-decoration: line-through;
+    color: var(--text-dim);
+  }
+
+  .quest-xp {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--xp);
+    background: rgba(167, 139, 250, 0.1);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .quest-rarity {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+  }
+
+  .rarity-common { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+  .rarity-rare { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+  .rarity-epic { background: rgba(167, 139, 250, 0.15); color: var(--xp); }
+  .rarity-legendary { background: rgba(251, 191, 36, 0.15); color: var(--gold); }
+
+  /* ─── PARTICLES ─── */
+  .particle-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .particle {
+    position: absolute;
+    font-size: 16px;
+    animation: particle-rise 1.2s ease forwards;
+    pointer-events: none;
+  }
+
+  @keyframes particle-rise {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), -80px) scale(0.4); }
+  }
+
+  .footer {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="quest-panel">
+  <div class="particle-container" id="particles"></div>
+  <div class="hero-row">
+    <div class="avatar" id="avatar">
+      ⚔️
+      <div class="level-badge" id="levelBadge">LV 1</div>
+    </div>
+    <div class="hero-info">
+      <div class="hero-title" id="heroTitle">Project Champion</div>
+      <div class="hero-class" id="heroClass">Creative Director</div>
+    </div>
+    <div class="streak-chip">
+      <div class="streak-flame">🔥</div>
+      <div>
+        <div class="streak-num" id="streakNum">0</div>
+        <div class="streak-label">streak</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="xp-section">
+    <div class="xp-header">
+      <span class="xp-text">XP: <span id="xpCurrent">0</span> / <span id="xpMax">500</span></span>
+      <span class="xp-text">Next: <span id="nextReward">Custom Title</span></span>
+    </div>
+    <div class="xp-bar-track">
+      <div class="xp-bar-fill" id="xpFill"></div>
+    </div>
+  </div>
+
+  <div class="stat-strip" id="statStrip"></div>
+
+  <div class="quest-list-header">Active Quests</div>
+  <div id="questList"></div>
+
+  <div class="footer">
+    <span>✨ Complete quests to earn XP</span>
+    <span id="totalXP"></span>
+  </div>
+</div>
+
+<script>
+  const P = new URLSearchParams(window.location.search);
+
+  const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
+  function sanitizeRarity(r) {
+    const v = (r || '').trim().toLowerCase();
+    return VALID_RARITIES.includes(v) ? v : 'common';
+  }
+
+  function parseQuests(raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    console.warn('quest-log-widget: legacy delimited quests format detected. Migrate to JSON params before v1.2.');
+    return raw.split(',').map(q => {
+      const [name, xp, rarity, done] = q.split(':');
+      return { name: (name || '').trim(), xp: parseInt(xp) || 25, rarity: (rarity || 'common').trim(), done: done === '1' };
+    });
+  }
+
+  function parseStats(raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    console.warn('quest-log-widget: legacy delimited stats format detected. Migrate to JSON params before v1.2.');
+    return raw.split(',').map(s => {
+      const [icon, value, label] = s.split(':');
+      return { icon: (icon || '').trim(), value: (value || '').trim(), label: (label || '').trim() };
+    });
+  }
+
+  const config = {
+    title: P.get('title') || 'Project Champion',
+    class: P.get('class') || 'Creative Director',
+    avatar: P.get('avatar') || '⚔️',
+    level: parseInt(P.get('level')) || 7,
+    xp: parseInt(P.get('xp')) || 340,
+    xpMax: parseInt(P.get('xpMax')) || 500,
+    streak: parseInt(P.get('streak')) || 12,
+    nextReward: P.get('reward') || 'Custom Title',
+    quests: parseQuests(P.get('quests') || '[{"name":"Finalize brand guidelines","xp":50,"rarity":"epic","done":true},{"name":"Review wireframes","xp":30,"rarity":"rare","done":true},{"name":"Client presentation deck","xp":80,"rarity":"legendary","done":false},{"name":"Asset library setup","xp":25,"rarity":"common","done":false},{"name":"Color system documentation","xp":40,"rarity":"rare","done":false}]'),
+    stats: parseStats(P.get('stats') || '[{"icon":"⚡","value":"18","label":"quests done"},{"icon":"🎯","value":"92%","label":"accuracy"},{"icon":"💎","value":"1240","label":"total xp"}]')
+  };
+
+  // Hero
+  document.getElementById('heroTitle').textContent = config.title;
+  document.getElementById('heroClass').textContent = config.class;
+  document.getElementById('avatar').firstChild.textContent = config.avatar;
+  document.getElementById('levelBadge').textContent = 'LV ' + config.level;
+  document.getElementById('nextReward').textContent = config.nextReward;
+  document.getElementById('xpMax').textContent = config.xpMax;
+
+  // Streak count-up
+  const streakEl = document.getElementById('streakNum');
+  let sCount = 0;
+  const sStep = Math.max(1, Math.floor(config.streak / 20));
+  const sTimer = setInterval(() => {
+    sCount += sStep;
+    if (sCount >= config.streak) { sCount = config.streak; clearInterval(sTimer); }
+    streakEl.textContent = sCount;
+  }, 40);
+
+  // XP bar + count-up
+  const xpFill = document.getElementById('xpFill');
+  const xpCurrent = document.getElementById('xpCurrent');
+  setTimeout(() => {
+    xpFill.style.width = (config.xp / config.xpMax * 100) + '%';
+    let xc = 0;
+    const xStep = config.xp / 40;
+    const xTimer = setInterval(() => {
+      xc += xStep;
+      if (xc >= config.xp) { xc = config.xp; clearInterval(xTimer); }
+      xpCurrent.textContent = Math.round(xc);
+    }, 30);
+  }, 400);
+
+  // Stats
+  const statStrip = document.getElementById('statStrip');
+  config.stats.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'stat-chip';
+    const iconEl = document.createElement('div');
+    iconEl.className = 'stat-chip-icon';
+    iconEl.textContent = s.icon;
+    const valEl = document.createElement('div');
+    valEl.className = 'stat-chip-val';
+    valEl.textContent = s.value;
+    const labelEl = document.createElement('div');
+    labelEl.className = 'stat-chip-label';
+    labelEl.textContent = s.label;
+    chip.appendChild(iconEl);
+    chip.appendChild(valEl);
+    chip.appendChild(labelEl);
+    statStrip.appendChild(chip);
+  });
+
+  // Quests
+  const questList = document.getElementById('questList');
+  config.quests.forEach((q, i) => {
+    const item = document.createElement('div');
+    item.className = `quest-item ${q.done ? 'done' : ''}`;
+    item.style.animationDelay = `${0.2 + i * 0.08}s`;
+    const safeRarity = sanitizeRarity(q.rarity);
+    const checkEl = document.createElement('div');
+    checkEl.className = 'quest-check';
+    checkEl.textContent = q.done ? '\u2713' : '';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'quest-name';
+    nameEl.textContent = q.name;
+    const rarityEl = document.createElement('span');
+    rarityEl.className = 'quest-rarity rarity-' + safeRarity;
+    rarityEl.textContent = safeRarity;
+    const xpEl = document.createElement('div');
+    xpEl.className = 'quest-xp';
+    xpEl.textContent = '+' + q.xp + ' XP';
+    item.appendChild(checkEl);
+    item.appendChild(nameEl);
+    item.appendChild(rarityEl);
+    item.appendChild(xpEl);
+    questList.appendChild(item);
+  });
+
+  // Total XP
+  const totalXP = config.quests.filter(q => q.done).reduce((a, q) => a + q.xp, 0);
+  document.getElementById('totalXP').textContent = `${totalXP} XP earned`;
+
+  // Spawn particles on load for completed quests
+  const particleContainer = document.getElementById('particles');
+  function spawnParticle(x, y) {
+    const emojis = ['✨', '⭐', '💫', '🌟', '💎'];
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.setProperty('--dx', (Math.random() * 60 - 30) + 'px');
+    particleContainer.appendChild(p);
+    setTimeout(() => p.remove(), 1200);
+  }
+
+  // Burst particles from streak area on load
+  setTimeout(() => {
+    const rect = document.querySelector('.streak-chip').getBoundingClientRect();
+    for (let i = 0; i < 6; i++) {
+      setTimeout(() => spawnParticle(
+        rect.left + Math.random() * rect.width,
+        rect.top + Math.random() * rect.height
+      ), i * 80);
+    }
+  }, 800);
+</script>
+</body>
+</html>

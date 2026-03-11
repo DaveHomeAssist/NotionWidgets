@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Status Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface-2: #1a1a26;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text-dim: #6b6b80;
+    --accent: #7c5cff;
+    --accent-glow: rgba(124, 92, 255, 0.3);
+    --success: #34d399;
+    --success-glow: rgba(52, 211, 153, 0.3);
+    --warn: #fbbf24;
+    --warn-glow: rgba(251, 191, 36, 0.3);
+    --danger: #f87171;
+    --active: #7c5cff;
+    --ring-track: #1e1e2e;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --surface-2: #f0f0f5;
+      --border: #e0e0ea;
+      --text: #1a1a2e;
+      --text-dim: #8888a0;
+      --ring-track: #e8e8f0;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .dashboard {
+    width: 100%;
+    max-width: 520px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dashboard::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 20%, var(--accent-glow) 0%, transparent 50%);
+    opacity: 0.15;
+    pointer-events: none;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    position: relative;
+  }
+
+  .project-name {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .project-client {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 100px;
+    background: var(--accent);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+
+  .status-badge.completed { background: var(--success); }
+  .status-badge.at-risk { background: var(--danger); }
+  .status-badge.paused { background: var(--text-dim); }
+
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+    50% { box-shadow: 0 0 0 6px transparent; }
+  }
+
+  .ring-section {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    margin-bottom: 28px;
+  }
+
+  .ring-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    flex-shrink: 0;
+  }
+
+  .ring-svg {
+    width: 140px;
+    height: 140px;
+    transform: rotate(-90deg);
+  }
+
+  .ring-track {
+    fill: none;
+    stroke: var(--ring-track);
+    stroke-width: 10;
+  }
+
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 377;
+    stroke-dashoffset: 377;
+    transition: stroke-dashoffset 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+  }
+
+  .ring-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+
+  .ring-pct {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .ring-pct .pct-symbol {
+    font-size: 16px;
+    color: var(--text-dim);
+  }
+
+  .ring-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+
+  .stats-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .stat-value {
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .stat-value.on-track { color: var(--success); }
+  .stat-value.at-risk { color: var(--danger); }
+  .stat-value.warning { color: var(--warn); }
+
+  .phases {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .phase-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    opacity: 0;
+    transform: translateX(-12px);
+    animation: phase-in 0.5s ease forwards;
+  }
+
+  .phase-row.active {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, var(--surface-2), rgba(124, 92, 255, 0.06));
+  }
+
+  .phase-row.completed-phase { opacity: 0.7; }
+
+  @keyframes phase-in {
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .phase-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    background: var(--border);
+    color: var(--text-dim);
+  }
+
+  .phase-row.completed-phase .phase-icon { background: var(--success); color: #fff; }
+  .phase-row.active .phase-icon { background: var(--accent); color: #fff; animation: icon-pulse 1.5s ease infinite; }
+  .phase-row.upcoming .phase-icon { background: var(--border); color: var(--text-dim); }
+
+  @keyframes icon-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+    50% { box-shadow: 0 0 0 5px transparent; }
+  }
+
+  .phase-info { flex: 1; min-width: 0; }
+
+  .phase-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .phase-dates {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    margin-top: 1px;
+  }
+
+  .phase-bar-wrap {
+    width: 80px;
+    height: 6px;
+    background: var(--ring-track);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .phase-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    width: 0%;
+    transition: width 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .phase-row.completed-phase .phase-bar { background: var(--success); }
+  .phase-row.active .phase-bar { background: var(--accent); }
+  .phase-row.upcoming .phase-bar { background: var(--text-dim); }
+
+  .phase-pct {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .footer {
+    margin-top: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-text {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    display: inline-block;
+    margin-right: 6px;
+    animation: blink 1.5s ease infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+<div class="dashboard" id="dashboard">
+  <div class="header">
+    <div>
+      <div class="project-name" id="projectName">Brand Redesign</div>
+      <div class="project-client" id="projectClient">Acme Corp</div>
+    </div>
+    <div class="status-badge" id="statusBadge">In Progress</div>
+  </div>
+
+  <div class="ring-section">
+    <div class="ring-container">
+      <svg class="ring-svg" viewBox="0 0 140 140">
+        <circle class="ring-track" cx="70" cy="70" r="60" />
+        <circle class="ring-progress" id="ringProgress" cx="70" cy="70" r="60" />
+      </svg>
+      <div class="ring-center">
+        <div class="ring-pct"><span id="pctNum">0</span><span class="pct-symbol">%</span></div>
+        <div class="ring-label">Complete</div>
+      </div>
+    </div>
+    <div class="stats-col" id="statsCol"></div>
+  </div>
+
+  <div class="phases" id="phases"></div>
+
+  <div class="footer">
+    <span class="footer-text"><span class="live-dot"></span>Updated just now</span>
+    <span class="footer-text" id="deadline"></span>
+  </div>
+</div>
+
+<script>
+  // ─── CONFIG VIA URL PARAMS ───
+  const P = new URLSearchParams(window.location.search);
+
+  function parsePhases(raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    console.warn('project-status-widget: legacy delimited phases format detected. Migrate to JSON params before v1.2.');
+    return raw.split(',').map(p => {
+      const [name, pct] = p.split(':');
+      return { name: (name || '').trim(), pct: parseInt(pct) || 0 };
+    });
+  }
+
+  function parseStats(raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    console.warn('project-status-widget: legacy delimited stats format detected. Migrate to JSON params before v1.2.');
+    return raw.split(',').map(s => {
+      const parts = s.split(':');
+      return { label: (parts[0] || '').trim(), value: (parts[1] || '').trim(), color: (parts[2] || '').trim() };
+    });
+  }
+
+  const config = {
+    name: P.get('name') || 'Brand Redesign',
+    client: P.get('client') || 'Acme Corp',
+    status: P.get('status') || 'in-progress', // in-progress | completed | at-risk | paused
+    deadline: P.get('deadline') || '2026-04-30',
+    phases: parsePhases(P.get('phases') || '[{"name":"Discovery","pct":100},{"name":"Strategy","pct":100},{"name":"Design","pct":65},{"name":"Development","pct":20},{"name":"Launch","pct":0}]'),
+    stats: parseStats(P.get('stats') || '[{"label":"Tasks","value":"18/24"},{"label":"Hours","value":"86h"},{"label":"Budget","value":"72%"}]'),
+    accent: P.get('accent') || null
+  };
+
+  // Apply custom accent (validate hex color)
+  if (config.accent && /^#[0-9a-fA-F]{3,8}$/.test(config.accent)) {
+    document.documentElement.style.setProperty('--accent', config.accent);
+    document.documentElement.style.setProperty('--accent-glow', config.accent + '4d');
+  }
+
+  // Header
+  document.getElementById('projectName').textContent = config.name;
+  document.getElementById('projectClient').textContent = config.client;
+
+  const badge = document.getElementById('statusBadge');
+  const statusMap = {
+    'in-progress': ['In Progress', ''],
+    'completed': ['Completed', 'completed'],
+    'at-risk': ['At Risk', 'at-risk'],
+    'paused': ['Paused', 'paused']
+  };
+  const [badgeText, badgeClass] = statusMap[config.status] || statusMap['in-progress'];
+  badge.textContent = badgeText;
+  if (badgeClass) badge.classList.add(badgeClass);
+
+  // Deadline
+  const dl = new Date(config.deadline);
+  const now = new Date();
+  const daysLeft = Math.ceil((dl - now) / (1000 * 60 * 60 * 24));
+  document.getElementById('deadline').textContent = daysLeft > 0 ? `${daysLeft}d remaining` : 'Overdue';
+
+  // Overall progress (average of phases)
+  const totalPct = Math.round(config.phases.reduce((a, p) => a + p.pct, 0) / config.phases.length);
+
+  // Ring animation
+  const circ = 2 * Math.PI * 60; // ~377
+  const ringEl = document.getElementById('ringProgress');
+  const pctEl = document.getElementById('pctNum');
+
+  setTimeout(() => {
+    ringEl.style.strokeDashoffset = circ - (circ * totalPct / 100);
+    // Count up
+    let current = 0;
+    const step = totalPct / 40;
+    const counter = setInterval(() => {
+      current += step;
+      if (current >= totalPct) { current = totalPct; clearInterval(counter); }
+      pctEl.textContent = Math.round(current);
+    }, 30);
+  }, 300);
+
+  // Stats
+  const statsCol = document.getElementById('statsCol');
+  const VALID_STAT_COLORS = ['on-track', 'at-risk', 'warning', ''];
+  config.stats.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    const label = document.createElement('span');
+    label.className = 'stat-label';
+    label.textContent = s.label;
+    const value = document.createElement('span');
+    const safeColor = VALID_STAT_COLORS.includes(s.color) ? s.color : '';
+    value.className = 'stat-value' + (safeColor ? ' ' + safeColor : '');
+    value.textContent = s.value;
+    row.appendChild(label);
+    row.appendChild(value);
+    statsCol.appendChild(row);
+  });
+
+  // Phases
+  const phasesEl = document.getElementById('phases');
+  const phaseIcons = ['🔍', '📐', '🎨', '⚙️', '🚀', '📋', '✅', '📊'];
+
+  config.phases.forEach((phase, i) => {
+    const state = phase.pct >= 100 ? 'completed-phase' : phase.pct > 0 ? 'active' : 'upcoming';
+    const row = document.createElement('div');
+    row.className = `phase-row ${state}`;
+    row.style.animationDelay = `${0.15 + i * 0.1}s`;
+
+    const icon = document.createElement('div');
+    icon.className = 'phase-icon';
+    icon.textContent = phase.pct >= 100 ? '✓' : (phaseIcons[i] || '○');
+
+    const info = document.createElement('div');
+    info.className = 'phase-info';
+    const name = document.createElement('div');
+    name.className = 'phase-name';
+    name.textContent = phase.name;
+    info.appendChild(name);
+
+    const barWrap = document.createElement('div');
+    barWrap.className = 'phase-bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'phase-bar';
+    bar.dataset.pct = phase.pct;
+    barWrap.appendChild(bar);
+
+    const pctLabel = document.createElement('div');
+    pctLabel.className = 'phase-pct';
+    pctLabel.textContent = phase.pct + '%';
+
+    row.appendChild(icon);
+    row.appendChild(info);
+    row.appendChild(barWrap);
+    row.appendChild(pctLabel);
+    phasesEl.appendChild(row);
+  });
+
+  // Animate phase bars
+  setTimeout(() => {
+    document.querySelectorAll('.phase-bar').forEach(bar => {
+      bar.style.width = bar.dataset.pct + '%';
+    });
+  }, 600);
+</script>
+</body>
+</html>
