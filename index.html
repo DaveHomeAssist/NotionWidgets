@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client Approval Hub</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #09090e;
+    --surface: #111118;
+    --surface-2: #1a1a24;
+    --surface-3: #222233;
+    --border: #2a2a3d;
+    --border-focus: #4a4a6a;
+    --text: #e8e8f2;
+    --text-dim: #6e6e8a;
+    --approve: #34d399;
+    --approve-glow: rgba(52, 211, 153, 0.25);
+    --approve-bg: rgba(52, 211, 153, 0.08);
+    --revise: #fbbf24;
+    --revise-glow: rgba(251, 191, 36, 0.25);
+    --revise-bg: rgba(251, 191, 36, 0.08);
+    --reject: #f87171;
+    --reject-glow: rgba(248, 113, 113, 0.25);
+    --reject-bg: rgba(248, 113, 113, 0.08);
+    --accent: #818cf8;
+    --accent-glow: rgba(129, 140, 248, 0.25);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f4f8;
+      --surface: #ffffff;
+      --surface-2: #f0f0f6;
+      --surface-3: #e8e8f0;
+      --border: #d4d4e0;
+      --border-focus: #b0b0c8;
+      --text: #1a1a2e;
+      --text-dim: #7a7a96;
+      --approve-bg: rgba(52, 211, 153, 0.12);
+      --revise-bg: rgba(251, 191, 36, 0.12);
+      --reject-bg: rgba(248, 113, 113, 0.12);
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto; /* Phase 1: was overflow:hidden — clipped content on short viewports */
+  }
+
+  .approval-panel {
+    width: 100%;
+    max-width: 500px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .approval-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--approve), var(--accent), var(--revise));
+    z-index: 2;
+  }
+
+  .panel-body {
+    padding: 28px;
+  }
+
+  /* ─── HEADER ─── */
+  .ap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .ap-title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .ap-subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-top: 2px;
+  }
+
+  .round-badge {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  /* ─── DELIVERABLES ─── */
+  .deliverables {
+    margin-bottom: 22px;
+  }
+
+  .deliv-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 8px;
+  }
+
+  .deliv-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .deliv-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    opacity: 0;
+    transform: translateY(6px);
+    animation: fade-up 0.4s ease forwards;
+    cursor: default;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .deliv-item:hover {
+    border-color: var(--border-focus);
+    background: var(--surface-3);
+  }
+
+  @keyframes fade-up {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .deliv-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    background: var(--surface-3);
+  }
+
+  .deliv-info { flex: 1; min-width: 0; }
+
+  .deliv-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .deliv-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .deliv-status {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .status-approved { background: var(--approve-bg); color: var(--approve); }
+  .status-revisions { background: var(--revise-bg); color: var(--revise); }
+  .status-pending { background: var(--surface-3); color: var(--text-dim); }
+  .status-rejected { background: var(--reject-bg); color: var(--reject); }
+
+  /* ─── APPROVAL ACTIONS ─── */
+  .action-section {
+    margin-bottom: 20px;
+  }
+
+  .action-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 10px;
+  }
+
+  .action-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 10px;
+    border-radius: 14px;
+    border: 2px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .action-btn:hover { transform: translateY(-2px); }
+
+  .action-btn.approve-btn:hover, .action-btn.approve-btn.selected {
+    border-color: var(--approve);
+    background: var(--approve-bg);
+    box-shadow: 0 0 20px var(--approve-glow);
+  }
+
+  .action-btn.revise-btn:hover, .action-btn.revise-btn.selected {
+    border-color: var(--revise);
+    background: var(--revise-bg);
+    box-shadow: 0 0 20px var(--revise-glow);
+  }
+
+  .action-btn.reject-btn:hover, .action-btn.reject-btn.selected {
+    border-color: var(--reject);
+    background: var(--reject-bg);
+    box-shadow: 0 0 20px var(--reject-glow);
+  }
+
+  .action-icon { font-size: 24px; }
+
+  .action-text {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ─── FEEDBACK TEXTAREA ─── */
+  .feedback-section {
+    margin-bottom: 18px;
+    display: none;
+  }
+
+  .feedback-section.visible { display: block; }
+
+  .feedback-area {
+    width: 100%;
+    min-height: 80px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .feedback-area:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .feedback-area::placeholder { color: var(--text-dim); }
+
+  .feedback-hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-top: 6px;
+  }
+
+  /* ─── SUBMIT ─── */
+  .submit-row {
+    gap: 10px; /* Phase 1: removed dead display:flex (was immediately overridden by display:none below) */
+    display: none;
+  }
+
+  .submit-row.visible { display: flex; }
+
+  .submit-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .submit-btn.primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .submit-btn.primary:hover {
+    box-shadow: 0 0 24px var(--accent-glow);
+    transform: translateY(-1px);
+  }
+
+  .submit-btn.ghost {
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  /* ─── TIMELINE ─── */
+  .timeline-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .timeline-item {
+    display: flex;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 12px;
+  }
+
+  .tl-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .tl-dot.approved { background: var(--approve); box-shadow: 0 0 6px var(--approve-glow); }
+  .tl-dot.revisions { background: var(--revise); box-shadow: 0 0 6px var(--revise-glow); }
+  .tl-dot.pending { background: var(--text-dim); }
+  .tl-dot.submitted { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+
+  .tl-content { flex: 1; }
+
+  .tl-text { color: var(--text); font-weight: 500; }
+  .tl-date {
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    margin-top: 1px;
+  }
+
+  /* ─── SUCCESS OVERLAY ─── */
+  .success-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+    border-radius: 20px;
+    animation: overlay-in 0.4s ease;
+  }
+
+  .success-overlay.visible { display: flex; }
+
+  @keyframes overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .success-icon {
+    font-size: 48px;
+    animation: pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes pop-in {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+
+  .success-text {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .success-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ─── ERROR STATE ─── */
+  .error-bar {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--reject-bg);
+    border: 1px solid var(--reject);
+    font-size: 12px;
+    color: var(--reject);
+    margin-bottom: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .error-bar.visible { display: flex; }
+</style>
+</head>
+<body>
+<div class="approval-panel" id="panel">
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-icon" id="successIcon">✅</div>
+    <div class="success-text" id="successText">Feedback Submitted</div>
+    <div class="success-sub" id="successSub">Your response has been recorded</div>
+  </div>
+
+  <div class="panel-body">
+    <div class="ap-header">
+      <div>
+        <div class="ap-title" id="apTitle">Creative Review</div>
+        <div class="ap-subtitle" id="apSubtitle">Website Redesign — Homepage</div>
+      </div>
+      <div class="round-badge" id="roundBadge">Round 2</div>
+    </div>
+
+    <div class="deliverables">
+      <div class="deliv-label">Deliverables</div>
+      <div class="deliv-grid" id="delivGrid"></div>
+    </div>
+
+    <div class="action-section">
+      <div class="action-label">Your Decision</div>
+      <div class="action-buttons" id="actionBtns">
+        <button class="action-btn approve-btn" data-action="approve">
+          <span class="action-icon">👍</span>
+          <span class="action-text">Approve</span>
+        </button>
+        <button class="action-btn revise-btn" data-action="revisions">
+          <span class="action-icon">✏️</span>
+          <span class="action-text">Revisions</span>
+        </button>
+        <button class="action-btn reject-btn" data-action="reject">
+          <span class="action-icon">↩️</span>
+          <span class="action-text">Restart</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="feedback-section" id="feedbackSection">
+      <textarea class="feedback-area" id="feedbackArea" placeholder="Add your feedback, revision notes, or questions..."></textarea>
+      <div class="feedback-hint">Be specific — reference sections, colors, copy, or layouts</div>
+    </div>
+
+    <div class="error-bar" id="errorBar"></div>
+
+    <div class="submit-row" id="submitRow">
+      <button class="submit-btn ghost" id="cancelBtn">Cancel</button>
+      <button class="submit-btn primary" id="submitBtn">Submit Feedback</button>
+    </div>
+
+    <div class="timeline-section">
+      <div class="deliv-label">Activity</div>
+      <div id="timeline"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const P = new URLSearchParams(window.location.search);
+
+  // ─── Phase 2: JSON parsing with legacy delimiter fallback ───────────────────
+  // New format: ?deliverables=[{"name":"...","type":"...","status":"..."},...]
+  // Legacy format (deprecated): ?deliverables=name:type:status,name:type:status
+  function parseDeliverables(raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    // Legacy fallback — deprecated, will be removed in v1.2
+    console.warn('client-approval-widget: legacy delimited deliverables format detected. Migrate to JSON params before v1.2.');
+    return raw.split(',').map(d => {
+      const [name, type, status] = d.split(':');
+      return { name: (name || '').trim(), type: (type || 'design').trim(), status: (status || 'pending').trim() };
+    });
+  }
+
+  function parseTimeline(raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    // Legacy fallback — deprecated, will be removed in v1.2
+    console.warn('client-approval-widget: legacy delimited timeline format detected. Migrate to JSON params before v1.2.');
+    return raw.split(',').map(t => {
+      const [text, type, date] = t.split(':');
+      return { text: (text || '').trim(), type: (type || 'pending').trim(), date: (date || '').trim() };
+    });
+  }
+
+  const config = {
+    title: P.get('title') || 'Creative Review',
+    subtitle: P.get('subtitle') || 'Website Redesign — Homepage',
+    round: P.get('round') || '2',
+    deliverables: parseDeliverables(P.get('deliverables') ||
+      '[{"name":"Homepage mockup","type":"design","status":"approved"},' +
+      '{"name":"Hero animation","type":"motion","status":"pending"},' +
+      '{"name":"Mobile responsive","type":"design","status":"revisions"},' +
+      '{"name":"Copy & headlines","type":"copy","status":"pending"}]'
+    ),
+    timeline: parseTimeline(P.get('timeline') ||
+      '[{"text":"Round 1 submitted","type":"submitted","date":"Mar 1"},' +
+      '{"text":"Logo approved","type":"approved","date":"Mar 3"},' +
+      '{"text":"Revisions requested on hero","type":"revisions","date":"Mar 4"},' +
+      '{"text":"Round 2 submitted","type":"submitted","date":"Mar 8"}]'
+    )
+  };
+
+  // Header
+  document.getElementById('apTitle').textContent = config.title;
+  document.getElementById('apSubtitle').textContent = config.subtitle;
+  document.getElementById('roundBadge').textContent = 'Round ' + config.round;
+
+  // ─── Phase 1: whitelists for CSS class injection ────────────────────────────
+  const VALID_TYPES    = new Set(['design', 'motion', 'copy', 'dev', 'photo', 'brand', 'video', 'audio']);
+  const VALID_STATUSES = new Set(['approved', 'revisions', 'pending', 'rejected']);
+  const VALID_TL_TYPES = new Set(['approved', 'revisions', 'pending', 'submitted']);
+
+  const typeIcons = {
+    design: '🎨', motion: '🎬', copy: '📝', dev: '⚙️', photo: '📷', brand: '✦', video: '🎥', audio: '🎵'
+  };
+  const typeLabels = {
+    design: 'Design', motion: 'Motion', copy: 'Copywriting', dev: 'Development',
+    photo: 'Photography', brand: 'Branding', video: 'Video', audio: 'Audio'
+  };
+
+  // ─── Phase 1: deliverables — createElement + textContent, no innerHTML ──────
+  const delivGrid = document.getElementById('delivGrid');
+  config.deliverables.forEach((d, i) => {
+    const safeType   = VALID_TYPES.has(d.type)       ? d.type   : 'design';
+    const safeStatus = VALID_STATUSES.has(d.status)  ? d.status : 'pending';
+
+    const item = document.createElement('div');
+    item.className = 'deliv-item';
+    item.style.animationDelay = `${0.1 + i * 0.08}s`;
+
+    const icon = document.createElement('div');
+    icon.className = 'deliv-icon';
+    icon.textContent = typeIcons[safeType] || '📄';
+
+    const info = document.createElement('div');
+    info.className = 'deliv-info';
+
+    const name = document.createElement('div');
+    name.className = 'deliv-name';
+    name.textContent = d.name;
+
+    const meta = document.createElement('div');
+    meta.className = 'deliv-meta';
+    meta.textContent = typeLabels[safeType] || safeType;
+
+    info.appendChild(name);
+    info.appendChild(meta);
+
+    const statusEl = document.createElement('div');
+    statusEl.className = `deliv-status status-${safeStatus}`;
+    statusEl.textContent = safeStatus;
+
+    item.appendChild(icon);
+    item.appendChild(info);
+    item.appendChild(statusEl);
+    delivGrid.appendChild(item);
+  });
+
+  // ─── Phase 1: timeline — createElement + textContent, no innerHTML ──────────
+  const timeline = document.getElementById('timeline');
+  config.timeline.forEach(t => {
+    const safeTlType = VALID_TL_TYPES.has(t.type) ? t.type : 'pending';
+
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+
+    const dot = document.createElement('div');
+    dot.className = `tl-dot ${safeTlType}`;
+
+    const content = document.createElement('div');
+    content.className = 'tl-content';
+
+    const text = document.createElement('div');
+    text.className = 'tl-text';
+    text.textContent = t.text;
+
+    const date = document.createElement('div');
+    date.className = 'tl-date';
+    date.textContent = t.date;
+
+    content.appendChild(text);
+    content.appendChild(date);
+    item.appendChild(dot);
+    item.appendChild(content);
+    timeline.appendChild(item);
+  });
+
+  // Interactive approval buttons
+  let selectedAction = null;
+  const feedbackSection = document.getElementById('feedbackSection');
+  const submitRow = document.getElementById('submitRow');
+  const btns = document.querySelectorAll('.action-btn');
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      btns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedAction = btn.dataset.action;
+      feedbackSection.classList.add('visible');
+      submitRow.classList.add('visible');
+
+      const area = document.getElementById('feedbackArea');
+      if (selectedAction === 'approve') {
+        area.placeholder = 'Optional: Any final notes before sign-off?';
+      } else if (selectedAction === 'revisions') {
+        area.placeholder = 'Describe the changes needed — be specific about sections, colors, copy...';
+      } else {
+        area.placeholder = 'Explain what needs to fundamentally change...';
+      }
+    });
+  });
+
+  document.getElementById('cancelBtn').addEventListener('click', () => {
+    btns.forEach(b => b.classList.remove('selected'));
+    feedbackSection.classList.remove('visible');
+    submitRow.classList.remove('visible');
+    selectedAction = null;
+  });
+
+  // ─── Phase 3: postMessage submission ────────────────────────────────────────
+  const errorBar = document.getElementById('errorBar');
+
+  function showError(msg) {
+    errorBar.textContent = '⚠ ' + msg;
+    errorBar.classList.add('visible');
+    setTimeout(() => errorBar.classList.remove('visible'), 5000);
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', () => {
+    if (!selectedAction) return;
+
+    const payload = {
+      type: 'approval-submission',
+      action: selectedAction,
+      feedback: document.getElementById('feedbackArea').value.trim(),
+      round: config.round,
+      title: config.title,
+      deliverables: config.deliverables,
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      const targetOrigin = P.get('targetOrigin') || '*';
+      window.parent.postMessage(payload, targetOrigin);
+    } catch (err) {
+      showError('Could not send — check iframe embed permissions.');
+      return;
+    }
+
+    const overlay = document.getElementById('successOverlay');
+    const iconMap = { approve: '✅', revisions: '✏️', reject: '↩️' };
+    const textMap = { approve: 'Approved!', revisions: 'Revision Request Sent', reject: 'Reset Requested' };
+    const subMap = {
+      approve: 'Great — the team will proceed to next phase',
+      revisions: 'The team has been notified of your notes',
+      reject: 'The team will restart this deliverable'
+    };
+
+    document.getElementById('successIcon').textContent = iconMap[selectedAction] || '✅';
+    document.getElementById('successText').textContent = textMap[selectedAction] || 'Response Sent';
+    document.getElementById('successSub').textContent = subMap[selectedAction] || 'Your response has been sent';
+    overlay.classList.add('visible');
+
+    setTimeout(() => overlay.classList.remove('visible'), 2500);
+  });
+</script>
+</body>
+</html>
