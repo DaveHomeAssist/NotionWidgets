@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notion Widgets</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #09090e;
+    --surface: #111118;
+    --surface-2: #1a1a24;
+    --border: #2a2a3d;
+    --border-hover: #4a4a6a;
+    --text: #e8e8f2;
+    --text-dim: #6e6e8a;
+    --accent: #818cf8;
+    --accent-glow: rgba(129, 140, 248, 0.2);
+    --green: #34d399;
+    --green-glow: rgba(52, 211, 153, 0.2);
+    --gold: #fbbf24;
+    --gold-glow: rgba(251, 191, 36, 0.2);
+    --purple: #a78bfa;
+    --purple-glow: rgba(167, 139, 250, 0.2);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f4f8;
+      --surface: #ffffff;
+      --surface-2: #f0f0f6;
+      --border: #d4d4e0;
+      --border-hover: #b0b0c8;
+      --text: #1a1a2e;
+      --text-dim: #7a7a96;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px;
+    overflow-y: auto;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 200px;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .hero-title {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    position: relative;
+  }
+
+  .widget-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .widget-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.2s;
+    text-decoration: none;
+    color: var(--text);
+    display: block;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: card-in 0.5s ease forwards;
+  }
+
+  .widget-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+  }
+
+  @keyframes card-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .widget-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+  }
+
+  .widget-card.approval::before { background: linear-gradient(90deg, var(--green), var(--accent)); }
+  .widget-card.quest::before { background: linear-gradient(90deg, var(--purple), #f472b6); }
+  .widget-card.status::before { background: linear-gradient(90deg, var(--accent), var(--gold)); }
+
+  .card-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .approval .card-icon { background: var(--green-glow); }
+  .quest .card-icon { background: var(--purple-glow); }
+  .status .card-icon { background: var(--accent-glow); }
+
+  .card-body { flex: 1; min-width: 0; }
+
+  .card-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .card-arrow {
+    font-size: 18px;
+    color: var(--text-dim);
+    align-self: center;
+    flex-shrink: 0;
+    transition: transform 0.2s, color 0.2s;
+  }
+
+  .widget-card:hover .card-arrow {
+    transform: translateX(4px);
+    color: var(--accent);
+  }
+
+  .footer {
+    margin-top: 48px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .footer a:hover { text-decoration: underline; }
+
+  .version {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    margin-top: 12px;
+    position: relative;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <div class="hero-title">Notion Widgets</div>
+    <div class="hero-sub">Embeddable components for Notion pages</div>
+  </div>
+
+  <div class="widget-grid">
+    <a class="widget-card approval" href="client-approval.html" style="animation-delay: 0.1s">
+      <div class="card-row">
+        <div class="card-icon">👍</div>
+        <div class="card-body">
+          <div class="card-title">Client Approval</div>
+          <div class="card-desc">Collect approve / revise / reject decisions with feedback. Sends responses via postMessage for iframe integration.</div>
+          <div class="card-tags">
+            <span class="tag">interactive</span>
+            <span class="tag">postMessage</span>
+            <span class="tag">url params</span>
+          </div>
+        </div>
+        <div class="card-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a class="widget-card quest" href="quest-log.html" style="animation-delay: 0.2s">
+      <div class="card-row">
+        <div class="card-icon">⚔️</div>
+        <div class="card-body">
+          <div class="card-title">Quest Log</div>
+          <div class="card-desc">Gamified task tracker with XP bar, streak counter, rarity tiers, and particle effects. Configurable via URL params.</div>
+          <div class="card-tags">
+            <span class="tag">gamification</span>
+            <span class="tag">animated</span>
+            <span class="tag">url params</span>
+          </div>
+        </div>
+        <div class="card-arrow">&rarr;</div>
+      </div>
+    </a>
+
+    <a class="widget-card status" href="project-status.html" style="animation-delay: 0.3s">
+      <div class="card-row">
+        <div class="card-icon">📊</div>
+        <div class="card-body">
+          <div class="card-title">Project Status</div>
+          <div class="card-desc">Progress ring, phase timeline, and key stats. Custom accent color support and animated bar charts.</div>
+          <div class="card-tags">
+            <span class="tag">dashboard</span>
+            <span class="tag">animated</span>
+            <span class="tag">url params</span>
+          </div>
+        </div>
+        <div class="card-arrow">&rarr;</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="footer">
+    <div>Use <code>/embed</code> in Notion and paste a widget URL</div>
+    <div class="version">v1.1</div>
+  </div>
+</div>
+</body>
+</html>
