@@ -501,33 +501,49 @@
 
 <script>
   const P = new URLSearchParams(window.location.search);
+  const initErrors = [];
+  const DEFAULT_DELIVERABLES = [
+    { name: 'Homepage mockup', type: 'design', status: 'approved' },
+    { name: 'Hero animation', type: 'motion', status: 'pending' },
+    { name: 'Mobile responsive', type: 'design', status: 'revisions' },
+    { name: 'Copy & headlines', type: 'copy', status: 'pending' }
+  ];
+  const DEFAULT_TIMELINE = [
+    { text: 'Round 1 submitted', type: 'submitted', date: 'Mar 1' },
+    { text: 'Logo approved', type: 'approved', date: 'Mar 3' },
+    { text: 'Revisions requested on hero', type: 'revisions', date: 'Mar 4' },
+    { text: 'Round 2 submitted', type: 'submitted', date: 'Mar 8' }
+  ];
 
-  // ─── Phase 2: JSON parsing with legacy delimiter fallback ───────────────────
-  // New format: ?deliverables=[{"name":"...","type":"...","status":"..."},...]
-  // Legacy format (deprecated): ?deliverables=name:type:status,name:type:status
-  function parseDeliverables(raw) {
+  function parseJsonArrayParam(raw, fallback, keyName) {
+    if (!raw) return fallback;
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (_) {}
-    // Legacy fallback — deprecated, will be removed in v1.2
-    console.warn('client-approval-widget: legacy delimited deliverables format detected. Migrate to JSON params before v1.2.');
-    return raw.split(',').map(d => {
-      const [name, type, status] = d.split(':');
-      return { name: (name || '').trim(), type: (type || 'design').trim(), status: (status || 'pending').trim() };
+      if (!Array.isArray(parsed)) throw new Error('Expected JSON array');
+      return parsed;
+    } catch (_) {
+      initErrors.push(`Invalid ${keyName} parameter JSON. Using defaults.`);
+      return fallback;
+    }
+  }
+
+  function normalizeDeliverables(items) {
+    return items.map(item => {
+      const obj = item && typeof item === 'object' ? item : {};
+      const name = typeof obj.name === 'string' && obj.name.trim() ? obj.name.trim() : 'Untitled deliverable';
+      const type = typeof obj.type === 'string' ? obj.type.trim().toLowerCase() : 'design';
+      const status = typeof obj.status === 'string' ? obj.status.trim().toLowerCase() : 'pending';
+      return { name, type, status };
     });
   }
 
-  function parseTimeline(raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (_) {}
-    // Legacy fallback — deprecated, will be removed in v1.2
-    console.warn('client-approval-widget: legacy delimited timeline format detected. Migrate to JSON params before v1.2.');
-    return raw.split(',').map(t => {
-      const [text, type, date] = t.split(':');
-      return { text: (text || '').trim(), type: (type || 'pending').trim(), date: (date || '').trim() };
+  function normalizeTimeline(items) {
+    return items.map(item => {
+      const obj = item && typeof item === 'object' ? item : {};
+      const text = typeof obj.text === 'string' && obj.text.trim() ? obj.text.trim() : 'Activity update';
+      const type = typeof obj.type === 'string' ? obj.type.trim().toLowerCase() : 'pending';
+      const date = typeof obj.date === 'string' ? obj.date.trim() : '';
+      return { text, type, date };
     });
   }
 
@@ -535,18 +551,8 @@
     title: P.get('title') || 'Creative Review',
     subtitle: P.get('subtitle') || 'Website Redesign — Homepage',
     round: P.get('round') || '2',
-    deliverables: parseDeliverables(P.get('deliverables') ||
-      '[{"name":"Homepage mockup","type":"design","status":"approved"},' +
-      '{"name":"Hero animation","type":"motion","status":"pending"},' +
-      '{"name":"Mobile responsive","type":"design","status":"revisions"},' +
-      '{"name":"Copy & headlines","type":"copy","status":"pending"}]'
-    ),
-    timeline: parseTimeline(P.get('timeline') ||
-      '[{"text":"Round 1 submitted","type":"submitted","date":"Mar 1"},' +
-      '{"text":"Logo approved","type":"approved","date":"Mar 3"},' +
-      '{"text":"Revisions requested on hero","type":"revisions","date":"Mar 4"},' +
-      '{"text":"Round 2 submitted","type":"submitted","date":"Mar 8"}]'
-    )
+    deliverables: normalizeDeliverables(parseJsonArrayParam(P.get('deliverables'), DEFAULT_DELIVERABLES, 'deliverables')),
+    timeline: normalizeTimeline(parseJsonArrayParam(P.get('timeline'), DEFAULT_TIMELINE, 'timeline'))
   };
 
   // Header
@@ -639,6 +645,7 @@
   const feedbackSection = document.getElementById('feedbackSection');
   const submitRow = document.getElementById('submitRow');
   const btns = document.querySelectorAll('.action-btn');
+  const feedbackArea = document.getElementById('feedbackArea');
 
   btns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -648,22 +655,27 @@
       feedbackSection.classList.add('visible');
       submitRow.classList.add('visible');
 
-      const area = document.getElementById('feedbackArea');
       if (selectedAction === 'approve') {
-        area.placeholder = 'Optional: Any final notes before sign-off?';
+        feedbackArea.placeholder = 'Optional: Any final notes before sign-off?';
       } else if (selectedAction === 'revisions') {
-        area.placeholder = 'Describe the changes needed — be specific about sections, colors, copy...';
+        feedbackArea.placeholder = 'Describe the changes needed — be specific about sections, colors, copy...';
       } else {
-        area.placeholder = 'Explain what needs to fundamentally change...';
+        feedbackArea.placeholder = 'Explain what needs to fundamentally change...';
       }
     });
   });
 
-  document.getElementById('cancelBtn').addEventListener('click', () => {
+  function resetInteractionState() {
     btns.forEach(b => b.classList.remove('selected'));
     feedbackSection.classList.remove('visible');
     submitRow.classList.remove('visible');
     selectedAction = null;
+    feedbackArea.value = '';
+    feedbackArea.placeholder = 'Add your feedback, revision notes, or questions...';
+  }
+
+  document.getElementById('cancelBtn').addEventListener('click', () => {
+    resetInteractionState();
   });
 
   // ─── Phase 3: postMessage submission ────────────────────────────────────────
@@ -675,13 +687,50 @@
     setTimeout(() => errorBar.classList.remove('visible'), 5000);
   }
 
+  if (initErrors.length > 0) showError(initErrors[0]);
+
+  const submitBtn = document.getElementById('submitBtn');
+  function setSubmitPending(isPending) {
+    submitBtn.disabled = isPending;
+    submitBtn.style.opacity = isPending ? '0.7' : '';
+    submitBtn.style.cursor = isPending ? 'not-allowed' : '';
+    submitBtn.textContent = isPending ? 'Sending...' : 'Submit Feedback';
+  }
+
+  function getSafeTargetOrigin() {
+    const rawTargetOrigin = (P.get('targetOrigin') || '').trim();
+    const raw = rawTargetOrigin || (document.referrer || '').trim();
+    if (!raw || raw === '*') return null;
+
+    try {
+      return new URL(raw).origin;
+    } catch (_) {
+      return null;
+    }
+  }
+
   document.getElementById('submitBtn').addEventListener('click', () => {
-    if (!selectedAction) return;
+    if (!selectedAction || submitBtn.disabled) return;
+
+    const feedback = feedbackArea.value.trim();
+    if ((selectedAction === 'revisions' || selectedAction === 'reject') && feedback.length < 10) {
+      showError('Please provide at least 10 characters of feedback for this action.');
+      feedbackArea.focus();
+      return;
+    }
+
+    const targetOrigin = getSafeTargetOrigin();
+    if (!targetOrigin) {
+      showError('Missing valid target origin. Add ?targetOrigin=https://your-domain.com');
+      return;
+    }
+
+    setSubmitPending(true);
 
     const payload = {
       type: 'approval-submission',
       action: selectedAction,
-      feedback: document.getElementById('feedbackArea').value.trim(),
+      feedback: feedback,
       round: config.round,
       title: config.title,
       deliverables: config.deliverables,
@@ -689,10 +738,10 @@
     };
 
     try {
-      const targetOrigin = P.get('targetOrigin') || '*';
       window.parent.postMessage(payload, targetOrigin);
     } catch (err) {
       showError('Could not send — check iframe embed permissions.');
+      setSubmitPending(false);
       return;
     }
 
@@ -710,7 +759,11 @@
     document.getElementById('successSub').textContent = subMap[selectedAction] || 'Your response has been sent';
     overlay.classList.add('visible');
 
-    setTimeout(() => overlay.classList.remove('visible'), 2500);
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      resetInteractionState();
+      setSubmitPending(false);
+    }, 2500);
   });
 </script>
 </body>
