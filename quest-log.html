@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quest Log — Gamified Tasks</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;600;700;800&display=swap');
-
   :root {
     --bg: #0c0c14;
     --surface: #13131f;
@@ -39,7 +37,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'Outfit', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -104,7 +102,7 @@
     color: #000;
     font-size: 10px;
     font-weight: 800;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     padding: 2px 6px;
     border-radius: 6px;
     border: 2px solid var(--surface);
@@ -121,7 +119,7 @@
   .hero-class {
     font-size: 11px;
     color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     margin-top: 1px;
   }
 
@@ -145,7 +143,7 @@
   .streak-num {
     font-size: 20px;
     font-weight: 800;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     color: var(--streak);
     line-height: 1;
   }
@@ -155,7 +153,7 @@
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   /* ─── XP BAR ─── */
@@ -172,7 +170,7 @@
 
   .xp-text {
     font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     color: var(--text-dim);
   }
 
@@ -235,7 +233,7 @@
   .stat-chip-val {
     font-size: 18px;
     font-weight: 800;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     line-height: 1;
   }
 
@@ -245,7 +243,7 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-top: 2px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   /* ─── QUEST LIST ─── */
@@ -256,7 +254,7 @@
     letter-spacing: 0.1em;
     color: var(--text-dim);
     margin-bottom: 10px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   .quest-item {
@@ -327,7 +325,7 @@
   .quest-xp {
     font-size: 11px;
     font-weight: 700;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     color: var(--xp);
     background: rgba(167, 139, 250, 0.1);
     padding: 3px 8px;
@@ -339,7 +337,7 @@
     padding: 2px 6px;
     border-radius: 4px;
     font-weight: 700;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     text-transform: uppercase;
   }
 
@@ -377,7 +375,7 @@
     align-items: center;
     font-size: 10px;
     color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   }
 </style>
 </head>
@@ -424,50 +422,92 @@
 </div>
 
 <script>
-  const P = new URLSearchParams(window.location.search);
+  // ─── HELPERS ───
+  function clampNumber(n, min, max) {
+    var v = Number(n);
+    if (!Number.isFinite(v)) return min;
+    return Math.max(min, Math.min(max, v));
+  }
+
+  function parseJsonArrayParam(raw, fallbackParser) {
+    if (!raw || !raw.trim()) return [];
+    try {
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    if (fallbackParser) return fallbackParser(raw);
+    return [];
+  }
 
   const VALID_RARITIES = ['common', 'rare', 'epic', 'legendary'];
   function sanitizeRarity(r) {
-    const v = (r || '').trim().toLowerCase();
+    var v = (r || '').trim().toLowerCase();
     return VALID_RARITIES.includes(v) ? v : 'common';
   }
 
+  const P = new URLSearchParams(window.location.search);
+
   function parseQuests(raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (_) {}
-    console.warn('quest-log-widget: legacy delimited quests format detected. Migrate to JSON params before v1.2.');
-    return raw.split(',').map(q => {
-      const [name, xp, rarity, done] = q.split(':');
-      return { name: (name || '').trim(), xp: parseInt(xp) || 25, rarity: (rarity || 'common').trim(), done: done === '1' };
+    return parseJsonArrayParam(raw, function(s) {
+      if (s.indexOf(':') === -1) return [];
+      console.warn('quest-log-widget: legacy delimited quests format detected. Migrate to JSON params before v1.2.');
+      return s.split(',').map(function(q) {
+        var parts = q.split(':');
+        return { name: (parts[0] || '').trim(), xp: parseInt(parts[1]) || 25, rarity: (parts[2] || 'common').trim(), done: parts[3] === '1' };
+      });
     });
   }
 
   function parseStats(raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (_) {}
-    console.warn('quest-log-widget: legacy delimited stats format detected. Migrate to JSON params before v1.2.');
-    return raw.split(',').map(s => {
-      const [icon, value, label] = s.split(':');
-      return { icon: (icon || '').trim(), value: (value || '').trim(), label: (label || '').trim() };
+    return parseJsonArrayParam(raw, function(s) {
+      if (s.indexOf(':') === -1) return [];
+      console.warn('quest-log-widget: legacy delimited stats format detected. Migrate to JSON params before v1.2.');
+      return s.split(',').map(function(q) {
+        var parts = q.split(':');
+        return { icon: (parts[0] || '').trim(), value: (parts[1] || '').trim(), label: (parts[2] || '').trim() };
+      });
     });
   }
 
-  const config = {
+  var DEFAULT_QUESTS = '[{"name":"Finalize brand guidelines","xp":50,"rarity":"epic","done":true},{"name":"Review wireframes","xp":30,"rarity":"rare","done":true},{"name":"Client presentation deck","xp":80,"rarity":"legendary","done":false},{"name":"Asset library setup","xp":25,"rarity":"common","done":false},{"name":"Color system documentation","xp":40,"rarity":"rare","done":false}]';
+  var DEFAULT_STATS = '[{"icon":"⚡","value":"18","label":"quests done"},{"icon":"🎯","value":"92%","label":"accuracy"},{"icon":"💎","value":"1240","label":"total xp"}]';
+
+  // Normalize quests: require name, clamp xp, validate rarity
+  var rawQuests = parseQuests(P.get('quests') || DEFAULT_QUESTS);
+  var quests = rawQuests
+    .filter(function(q) { return q && typeof q.name === 'string' && q.name.trim(); })
+    .map(function(q) {
+      return {
+        name: q.name.trim(),
+        xp: clampNumber(q.xp, 0, 99999),
+        rarity: sanitizeRarity(q.rarity),
+        done: q.done === true || q.done === '1'
+      };
+    });
+
+  // Normalize stats: require icon + value + label
+  var rawStats = parseStats(P.get('stats') || DEFAULT_STATS);
+  var stats = rawStats
+    .filter(function(s) { return s && typeof s.value === 'string'; })
+    .map(function(s) {
+      return { icon: String(s.icon || '').trim(), value: s.value.trim(), label: String(s.label || '').trim() };
+    });
+
+  var config = {
     title: P.get('title') || 'Project Champion',
     class: P.get('class') || 'Creative Director',
     avatar: P.get('avatar') || '⚔️',
-    level: parseInt(P.get('level')) || 7,
-    xp: parseInt(P.get('xp')) || 340,
-    xpMax: parseInt(P.get('xpMax')) || 500,
-    streak: parseInt(P.get('streak')) || 12,
-    nextReward: P.get('reward') || 'Custom Title',
-    quests: parseQuests(P.get('quests') || '[{"name":"Finalize brand guidelines","xp":50,"rarity":"epic","done":true},{"name":"Review wireframes","xp":30,"rarity":"rare","done":true},{"name":"Client presentation deck","xp":80,"rarity":"legendary","done":false},{"name":"Asset library setup","xp":25,"rarity":"common","done":false},{"name":"Color system documentation","xp":40,"rarity":"rare","done":false}]'),
-    stats: parseStats(P.get('stats') || '[{"icon":"⚡","value":"18","label":"quests done"},{"icon":"🎯","value":"92%","label":"accuracy"},{"icon":"💎","value":"1240","label":"total xp"}]')
+    level: clampNumber(parseInt(P.get('level')) || 7, 1, 999),
+    xp: clampNumber(parseInt(P.get('xp')) || 340, 0, 999999),
+    xpMax: clampNumber(parseInt(P.get('xpMax')) || 500, 1, 999999),
+    streak: clampNumber(parseInt(P.get('streak')) || 12, 0, 99999),
+    nextReward: P.get('nextReward') || P.get('reward') || 'Custom Title',
+    quests: quests,
+    stats: stats
   };
+
+  // Ensure xp does not exceed xpMax
+  if (config.xp > config.xpMax) config.xp = config.xpMax;
 
   // Hero
   document.getElementById('heroTitle').textContent = config.title;
@@ -478,41 +518,43 @@
   document.getElementById('xpMax').textContent = config.xpMax;
 
   // Streak count-up
-  const streakEl = document.getElementById('streakNum');
-  let sCount = 0;
-  const sStep = Math.max(1, Math.floor(config.streak / 20));
-  const sTimer = setInterval(() => {
+  var streakEl = document.getElementById('streakNum');
+  var sCount = 0;
+  var sStep = Math.max(1, Math.floor(config.streak / 20));
+  var sTimer = setInterval(function() {
     sCount += sStep;
     if (sCount >= config.streak) { sCount = config.streak; clearInterval(sTimer); }
     streakEl.textContent = sCount;
   }, 40);
 
   // XP bar + count-up
-  const xpFill = document.getElementById('xpFill');
-  const xpCurrent = document.getElementById('xpCurrent');
-  setTimeout(() => {
-    xpFill.style.width = (config.xp / config.xpMax * 100) + '%';
-    let xc = 0;
-    const xStep = config.xp / 40;
-    const xTimer = setInterval(() => {
+  var xpFill = document.getElementById('xpFill');
+  var xpCurrentEl = document.getElementById('xpCurrent');
+  setTimeout(function() {
+    var xpPct = config.xpMax > 0 ? (config.xp / config.xpMax * 100) : 0;
+    xpFill.style.width = xpPct + '%';
+    if (config.xp === 0) { xpCurrentEl.textContent = '0'; return; }
+    var xc = 0;
+    var xStep = config.xp / 40;
+    var xTimer = setInterval(function() {
       xc += xStep;
       if (xc >= config.xp) { xc = config.xp; clearInterval(xTimer); }
-      xpCurrent.textContent = Math.round(xc);
+      xpCurrentEl.textContent = Math.round(xc);
     }, 30);
   }, 400);
 
   // Stats
-  const statStrip = document.getElementById('statStrip');
-  config.stats.forEach(s => {
-    const chip = document.createElement('div');
+  var statStrip = document.getElementById('statStrip');
+  config.stats.forEach(function(s) {
+    var chip = document.createElement('div');
     chip.className = 'stat-chip';
-    const iconEl = document.createElement('div');
+    var iconEl = document.createElement('div');
     iconEl.className = 'stat-chip-icon';
     iconEl.textContent = s.icon;
-    const valEl = document.createElement('div');
+    var valEl = document.createElement('div');
     valEl.className = 'stat-chip-val';
     valEl.textContent = s.value;
-    const labelEl = document.createElement('div');
+    var labelEl = document.createElement('div');
     labelEl.className = 'stat-chip-label';
     labelEl.textContent = s.label;
     chip.appendChild(iconEl);
@@ -522,22 +564,21 @@
   });
 
   // Quests
-  const questList = document.getElementById('questList');
-  config.quests.forEach((q, i) => {
-    const item = document.createElement('div');
-    item.className = `quest-item ${q.done ? 'done' : ''}`;
-    item.style.animationDelay = `${0.2 + i * 0.08}s`;
-    const safeRarity = sanitizeRarity(q.rarity);
-    const checkEl = document.createElement('div');
+  var questList = document.getElementById('questList');
+  config.quests.forEach(function(q, i) {
+    var item = document.createElement('div');
+    item.className = 'quest-item' + (q.done ? ' done' : '');
+    item.style.animationDelay = (0.2 + i * 0.08) + 's';
+    var checkEl = document.createElement('div');
     checkEl.className = 'quest-check';
     checkEl.textContent = q.done ? '\u2713' : '';
-    const nameEl = document.createElement('div');
+    var nameEl = document.createElement('div');
     nameEl.className = 'quest-name';
     nameEl.textContent = q.name;
-    const rarityEl = document.createElement('span');
-    rarityEl.className = 'quest-rarity rarity-' + safeRarity;
-    rarityEl.textContent = safeRarity;
-    const xpEl = document.createElement('div');
+    var rarityEl = document.createElement('span');
+    rarityEl.className = 'quest-rarity rarity-' + q.rarity;
+    rarityEl.textContent = q.rarity;
+    var xpEl = document.createElement('div');
     xpEl.className = 'quest-xp';
     xpEl.textContent = '+' + q.xp + ' XP';
     item.appendChild(checkEl);
@@ -548,31 +589,35 @@
   });
 
   // Total XP
-  const totalXP = config.quests.filter(q => q.done).reduce((a, q) => a + q.xp, 0);
-  document.getElementById('totalXP').textContent = `${totalXP} XP earned`;
+  var totalXP = config.quests.filter(function(q) { return q.done; }).reduce(function(a, q) { return a + q.xp; }, 0);
+  document.getElementById('totalXP').textContent = totalXP + ' XP earned';
 
   // Spawn particles on load for completed quests
-  const particleContainer = document.getElementById('particles');
+  var particleContainer = document.getElementById('particles');
   function spawnParticle(x, y) {
-    const emojis = ['✨', '⭐', '💫', '🌟', '💎'];
-    const p = document.createElement('div');
+    var emojis = ['✨', '⭐', '💫', '🌟', '💎'];
+    var p = document.createElement('div');
     p.className = 'particle';
     p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
     p.style.left = x + 'px';
     p.style.top = y + 'px';
     p.style.setProperty('--dx', (Math.random() * 60 - 30) + 'px');
     particleContainer.appendChild(p);
-    setTimeout(() => p.remove(), 1200);
+    setTimeout(function() { p.remove(); }, 1200);
   }
 
   // Burst particles from streak area on load
-  setTimeout(() => {
-    const rect = document.querySelector('.streak-chip').getBoundingClientRect();
-    for (let i = 0; i < 6; i++) {
-      setTimeout(() => spawnParticle(
-        rect.left + Math.random() * rect.width,
-        rect.top + Math.random() * rect.height
-      ), i * 80);
+  setTimeout(function() {
+    var rect = document.querySelector('.streak-chip').getBoundingClientRect();
+    for (var i = 0; i < 6; i++) {
+      (function(idx) {
+        setTimeout(function() {
+          spawnParticle(
+            rect.left + Math.random() * rect.width,
+            rect.top + Math.random() * rect.height
+          );
+        }, idx * 80);
+      })(i);
     }
   }, 800);
 </script>

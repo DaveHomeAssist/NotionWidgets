@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Project Status Dashboard</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
-
   :root {
     --bg: #0a0a0f;
     --surface: #12121a;
@@ -40,7 +38,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -92,7 +90,7 @@
     font-size: 12px;
     color: var(--text-dim);
     margin-top: 2px;
-    font-family: 'Space Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   .status-badge {
@@ -104,7 +102,7 @@
     border-radius: 100px;
     background: var(--accent);
     color: #fff;
-    font-family: 'Space Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     animation: pulse-badge 2s ease-in-out infinite;
   }
 
@@ -165,7 +163,7 @@
   .ring-pct {
     font-size: 36px;
     font-weight: 700;
-    font-family: 'Space Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     letter-spacing: -0.04em;
     line-height: 1;
   }
@@ -210,7 +208,7 @@
   .stat-value {
     font-size: 14px;
     font-weight: 700;
-    font-family: 'Space Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   .stat-value.on-track { color: var(--success); }
@@ -282,7 +280,7 @@
   .phase-dates {
     font-size: 10px;
     color: var(--text-dim);
-    font-family: 'Space Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     margin-top: 1px;
   }
 
@@ -310,7 +308,7 @@
   .phase-pct {
     font-size: 11px;
     font-weight: 700;
-    font-family: 'Space Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
     width: 36px;
     text-align: right;
     flex-shrink: 0;
@@ -328,7 +326,7 @@
   .footer-text {
     font-size: 10px;
     color: var(--text-dim);
-    font-family: 'Space Mono', monospace;
+    font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   .live-dot {
@@ -380,47 +378,93 @@
 </div>
 
 <script>
+  // ─── HELPERS ───
+  function clampNumber(n, min, max) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return min;
+    return Math.max(min, Math.min(max, v));
+  }
+
+  function normalizeHexColor(raw) {
+    if (typeof raw !== 'string') return null;
+    const s = raw.trim();
+    const m3 = s.match(/^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/);
+    if (m3) return '#' + m3[1] + m3[1] + m3[2] + m3[2] + m3[3] + m3[3];
+    if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
+    return null;
+  }
+
+  function parseJsonArrayParam(raw, fallbackParser) {
+    if (!raw || !raw.trim()) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_) {}
+    if (fallbackParser) return fallbackParser(raw);
+    return [];
+  }
+
   // ─── CONFIG VIA URL PARAMS ───
   const P = new URLSearchParams(window.location.search);
 
   function parsePhases(raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (_) {}
-    console.warn('project-status-widget: legacy delimited phases format detected. Migrate to JSON params before v1.2.');
-    return raw.split(',').map(p => {
-      const [name, pct] = p.split(':');
-      return { name: (name || '').trim(), pct: parseInt(pct) || 0 };
+    return parseJsonArrayParam(raw, function(s) {
+      if (s.indexOf(':') === -1) return [];
+      console.warn('project-status-widget: legacy delimited phases format detected. Migrate to JSON params before v1.2.');
+      return s.split(',').map(function(p) {
+        var parts = p.split(':');
+        return { name: (parts[0] || '').trim(), pct: parseInt(parts[1]) || 0 };
+      });
     });
   }
 
   function parseStats(raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (_) {}
-    console.warn('project-status-widget: legacy delimited stats format detected. Migrate to JSON params before v1.2.');
-    return raw.split(',').map(s => {
-      const parts = s.split(':');
-      return { label: (parts[0] || '').trim(), value: (parts[1] || '').trim(), color: (parts[2] || '').trim() };
+    return parseJsonArrayParam(raw, function(s) {
+      if (s.indexOf(':') === -1) return [];
+      console.warn('project-status-widget: legacy delimited stats format detected. Migrate to JSON params before v1.2.');
+      return s.split(',').map(function(p) {
+        var parts = p.split(':');
+        return { label: (parts[0] || '').trim(), value: (parts[1] || '').trim(), color: (parts[2] || '').trim() };
+      });
     });
   }
+
+  const DEFAULT_PHASES = '[{"name":"Discovery","pct":100},{"name":"Strategy","pct":100},{"name":"Design","pct":65},{"name":"Development","pct":20},{"name":"Launch","pct":0}]';
+  const DEFAULT_STATS = '[{"label":"Tasks","value":"18/24"},{"label":"Hours","value":"86h"},{"label":"Budget","value":"72%"}]';
+
+  const rawPhases = parsePhases(P.get('phases') || DEFAULT_PHASES);
+  const rawStats = parseStats(P.get('stats') || DEFAULT_STATS);
+
+  // Normalize phases: require name string, clamp pct 0–100
+  const phases = rawPhases
+    .filter(function(p) { return p && typeof p.name === 'string' && p.name.trim(); })
+    .map(function(p) { return { name: p.name.trim(), pct: clampNumber(p.pct, 0, 100) }; });
+
+  // Normalize stats: require label + value strings
+  const VALID_STAT_COLORS = ['on-track', 'at-risk', 'warning', ''];
+  const stats = rawStats
+    .filter(function(s) { return s && typeof s.label === 'string' && typeof s.value === 'string'; })
+    .map(function(s) {
+      return { label: s.label.trim(), value: s.value.trim(), color: VALID_STAT_COLORS.includes(s.color) ? s.color : '' };
+    });
 
   const config = {
     name: P.get('name') || 'Brand Redesign',
     client: P.get('client') || 'Acme Corp',
-    status: P.get('status') || 'in-progress', // in-progress | completed | at-risk | paused
+    status: P.get('status') || 'in-progress',
     deadline: P.get('deadline') || '2026-04-30',
-    phases: parsePhases(P.get('phases') || '[{"name":"Discovery","pct":100},{"name":"Strategy","pct":100},{"name":"Design","pct":65},{"name":"Development","pct":20},{"name":"Launch","pct":0}]'),
-    stats: parseStats(P.get('stats') || '[{"label":"Tasks","value":"18/24"},{"label":"Hours","value":"86h"},{"label":"Budget","value":"72%"}]'),
-    accent: P.get('accent') || null
+    phases: phases,
+    stats: stats,
+    accent: normalizeHexColor(P.get('accent'))
   };
 
-  // Apply custom accent (validate hex color)
-  if (config.accent && /^#[0-9a-fA-F]{3,8}$/.test(config.accent)) {
+  // Apply custom accent from normalized 6-digit hex
+  if (config.accent) {
     document.documentElement.style.setProperty('--accent', config.accent);
-    document.documentElement.style.setProperty('--accent-glow', config.accent + '4d');
+    // Derive glow: parse hex channels and apply 0.3 alpha
+    var m = config.accent.match(/^#(..)(..)(..)$/);
+    var glowColor = 'rgba(' + parseInt(m[1],16) + ',' + parseInt(m[2],16) + ',' + parseInt(m[3],16) + ',0.3)';
+    document.documentElement.style.setProperty('--accent-glow', glowColor);
   }
 
   // Header
@@ -444,20 +488,22 @@
   const daysLeft = Math.ceil((dl - now) / (1000 * 60 * 60 * 24));
   document.getElementById('deadline').textContent = daysLeft > 0 ? `${daysLeft}d remaining` : 'Overdue';
 
-  // Overall progress (average of phases)
-  const totalPct = Math.round(config.phases.reduce((a, p) => a + p.pct, 0) / config.phases.length);
+  // Overall progress (average of phases) — guard against empty array
+  const totalPct = config.phases.length > 0
+    ? Math.round(config.phases.reduce(function(a, p) { return a + p.pct; }, 0) / config.phases.length)
+    : 0;
 
   // Ring animation
   const circ = 2 * Math.PI * 60; // ~377
   const ringEl = document.getElementById('ringProgress');
   const pctEl = document.getElementById('pctNum');
 
-  setTimeout(() => {
+  setTimeout(function() {
     ringEl.style.strokeDashoffset = circ - (circ * totalPct / 100);
-    // Count up
-    let current = 0;
-    const step = totalPct / 40;
-    const counter = setInterval(() => {
+    if (totalPct === 0) { pctEl.textContent = '0'; return; }
+    var current = 0;
+    var step = totalPct / 40;
+    var counter = setInterval(function() {
       current += step;
       if (current >= totalPct) { current = totalPct; clearInterval(counter); }
       pctEl.textContent = Math.round(current);
@@ -466,16 +512,14 @@
 
   // Stats
   const statsCol = document.getElementById('statsCol');
-  const VALID_STAT_COLORS = ['on-track', 'at-risk', 'warning', ''];
-  config.stats.forEach(s => {
+  config.stats.forEach(function(s) {
     const row = document.createElement('div');
     row.className = 'stat-row';
     const label = document.createElement('span');
     label.className = 'stat-label';
     label.textContent = s.label;
     const value = document.createElement('span');
-    const safeColor = VALID_STAT_COLORS.includes(s.color) ? s.color : '';
-    value.className = 'stat-value' + (safeColor ? ' ' + safeColor : '');
+    value.className = 'stat-value' + (s.color ? ' ' + s.color : '');
     value.textContent = s.value;
     row.appendChild(label);
     row.appendChild(value);
@@ -486,15 +530,16 @@
   const phasesEl = document.getElementById('phases');
   const phaseIcons = ['🔍', '📐', '🎨', '⚙️', '🚀', '📋', '✅', '📊'];
 
-  config.phases.forEach((phase, i) => {
-    const state = phase.pct >= 100 ? 'completed-phase' : phase.pct > 0 ? 'active' : 'upcoming';
+  config.phases.forEach(function(phase, i) {
+    const pct = phase.pct; // already clamped 0–100
+    const state = pct >= 100 ? 'completed-phase' : pct > 0 ? 'active' : 'upcoming';
     const row = document.createElement('div');
-    row.className = `phase-row ${state}`;
-    row.style.animationDelay = `${0.15 + i * 0.1}s`;
+    row.className = 'phase-row ' + state;
+    row.style.animationDelay = (0.15 + i * 0.1) + 's';
 
     const icon = document.createElement('div');
     icon.className = 'phase-icon';
-    icon.textContent = phase.pct >= 100 ? '✓' : (phaseIcons[i] || '○');
+    icon.textContent = pct >= 100 ? '✓' : (phaseIcons[i] || '○');
 
     const info = document.createElement('div');
     info.className = 'phase-info';
@@ -507,12 +552,12 @@
     barWrap.className = 'phase-bar-wrap';
     const bar = document.createElement('div');
     bar.className = 'phase-bar';
-    bar.dataset.pct = phase.pct;
+    bar.dataset.pct = pct;
     barWrap.appendChild(bar);
 
     const pctLabel = document.createElement('div');
     pctLabel.className = 'phase-pct';
-    pctLabel.textContent = phase.pct + '%';
+    pctLabel.textContent = pct + '%';
 
     row.appendChild(icon);
     row.appendChild(info);
@@ -522,8 +567,8 @@
   });
 
   // Animate phase bars
-  setTimeout(() => {
-    document.querySelectorAll('.phase-bar').forEach(bar => {
+  setTimeout(function() {
+    document.querySelectorAll('.phase-bar').forEach(function(bar) {
       bar.style.width = bar.dataset.pct + '%';
     });
   }, 600);
