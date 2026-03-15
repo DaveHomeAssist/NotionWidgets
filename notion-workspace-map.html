@@ -192,7 +192,7 @@
     @media (max-width: 700px) { .hero { grid-template-columns: 1fr; } .hero-stats { grid-template-columns: repeat(2,1fr); } }
 
     @media (prefers-color-scheme: light) {
-      :root {
+      html:not([data-theme]) {
         --bg:      #f0f2f7;
         --surface: #ffffff;
         --panel:   #f5f7fc;
@@ -201,23 +201,49 @@
         --muted:   #6b7a99;
         --text:    #1a2238;
       }
-      html, body { background: var(--bg); }
-      .map-wrap {
+      html:not([data-theme]), html:not([data-theme]) body { background: var(--bg); }
+      html:not([data-theme]) .map-wrap {
         background:
           radial-gradient(circle at 15% 20%, rgba(129,140,248,0.06), transparent 35%),
           radial-gradient(circle at 82% 65%, rgba(52,211,153,0.04), transparent 35%),
           radial-gradient(circle at 50% 90%, rgba(251,146,60,0.03), transparent 30%),
           #e8ebf5;
       }
-      .node .bg { fill: rgba(255,255,255,0.97); stroke: rgba(0,0,0,0.1); }
-      .node:hover .bg { stroke: rgba(0,0,0,0.2); }
-      .node .n-name { fill: #1a2238; }
-      .node .n-meta { fill: #6b7a99; }
-      .edge.structure { stroke: rgba(80,100,150,0.3); }
-      .edge.data      { stroke: rgba(16,160,100,0.4); }
-      .edge.reference { stroke: rgba(200,100,20,0.35); }
-      .impact-table td { border-bottom-color: rgba(0,0,0,0.05); }
+      html:not([data-theme]) .node .bg { fill: rgba(255,255,255,0.97); stroke: rgba(0,0,0,0.1); }
+      html:not([data-theme]) .node:hover .bg { stroke: rgba(0,0,0,0.2); }
+      html:not([data-theme]) .node .n-name { fill: #1a2238; }
+      html:not([data-theme]) .node .n-meta { fill: #6b7a99; }
+      html:not([data-theme]) .edge.structure { stroke: rgba(80,100,150,0.3); }
+      html:not([data-theme]) .edge.data      { stroke: rgba(16,160,100,0.4); }
+      html:not([data-theme]) .edge.reference { stroke: rgba(200,100,20,0.35); }
+      html:not([data-theme]) .impact-table td { border-bottom-color: rgba(0,0,0,0.05); }
     }
+
+    html[data-theme='light'] {
+      --bg:      #f0f2f7;
+      --surface: #ffffff;
+      --panel:   #f5f7fc;
+      --panel-2: #edf0f8;
+      --border:  rgba(0,0,0,0.08);
+      --muted:   #6b7a99;
+      --text:    #1a2238;
+    }
+    html[data-theme='light'], html[data-theme='light'] body { background: var(--bg); }
+    html[data-theme='light'] .map-wrap {
+      background:
+        radial-gradient(circle at 15% 20%, rgba(129,140,248,0.06), transparent 35%),
+        radial-gradient(circle at 82% 65%, rgba(52,211,153,0.04), transparent 35%),
+        radial-gradient(circle at 50% 90%, rgba(251,146,60,0.03), transparent 30%),
+        #e8ebf5;
+    }
+    html[data-theme='light'] .node .bg { fill: rgba(255,255,255,0.97); stroke: rgba(0,0,0,0.1); }
+    html[data-theme='light'] .node:hover .bg { stroke: rgba(0,0,0,0.2); }
+    html[data-theme='light'] .node .n-name { fill: #1a2238; }
+    html[data-theme='light'] .node .n-meta { fill: #6b7a99; }
+    html[data-theme='light'] .edge.structure { stroke: rgba(80,100,150,0.3); }
+    html[data-theme='light'] .edge.data      { stroke: rgba(16,160,100,0.4); }
+    html[data-theme='light'] .edge.reference { stroke: rgba(200,100,20,0.35); }
+    html[data-theme='light'] .impact-table td { border-bottom-color: rgba(0,0,0,0.05); }
   </style>
 </head>
 <body>
@@ -242,6 +268,7 @@
       <select id="layerF"></select>
     </div>
     <div class="seg" id="focusModes"></div>
+    <button class="icon-btn" id="themeBtn">Theme</button>
     <button class="icon-btn" id="heatBtn">🌡 Heatmap</button>
     <button class="icon-btn" id="fitBtn">⊡ Fit</button>
     <button class="icon-btn" id="resetBtn">↺ Reset</button>
@@ -380,6 +407,23 @@ const state = {
   focusNode: null,
   heatmap: false,
 };
+
+const THEME_KEY = 'notion-workspace-map-theme';
+
+function getInitialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'light' || saved === 'dark') return saved;
+  } catch {}
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = theme === 'light' ? '☀ Light' : '🌙 Dark';
+}
 
 let layoutCache = null;
 
@@ -725,6 +769,7 @@ function populateSelect(id, values) {
 
 populateSelect('layerF', nodes.map(n => n.layer));
 renderLegend();
+applyTheme(getInitialTheme());
 
 let st;
 document.getElementById('search').addEventListener('input', e => {
@@ -748,6 +793,13 @@ document.getElementById('heatBtn').addEventListener('click', () => {
   state.heatmap = !state.heatmap;
   document.getElementById('heatBtn').textContent = state.heatmap ? '🌡 Heatmap ON' : '🌡 Heatmap';
   render(false);
+});
+
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  applyTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
 });
 
 document.getElementById('fitBtn').addEventListener('click', () => {
