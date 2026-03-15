@@ -122,11 +122,9 @@
 
     .node {
       cursor: pointer;
-      transition: transform 0.18s ease, filter 0.18s ease, opacity 140ms ease-out;
-      transform-box: fill-box;
-      transform-origin: center;
+      transition: filter 140ms ease-out, opacity 140ms ease-out;
     }
-    .node:hover { transform: translateY(-4px); filter: drop-shadow(0 0 6px rgba(129,140,248,0.35)); }
+    .node:hover { filter: drop-shadow(0 0 6px rgba(129,140,248,0.35)); }
     .node .bg {
       fill: rgba(12,19,33,0.96); stroke: rgba(255,255,255,0.09); stroke-width: 1;
       rx: 13; transition: stroke 140ms, filter 140ms;
@@ -647,6 +645,15 @@ function renderMap(visIds) {
       ${state.heatmap ? `<text class="n-degree" x="${NW-12}" y="16" text-anchor="end" fill="${heatCol}">${deg}↔</text>` : ''}
       ${(n.risks?.length) ? `<text class="n-degree" x="${NW-12}" y="${state.heatmap ? 30 : 16}" text-anchor="end" fill="#f59e0b">!${n.risks.length}</text>` : ''}
     `;
+    if (vis) {
+      const baseY = py;
+      g.addEventListener('mouseenter', () => {
+        g.setAttribute('transform', `translate(${px},${baseY - 4})`);
+      });
+      g.addEventListener('mouseleave', () => {
+        g.setAttribute('transform', `translate(${px},${baseY})`);
+      });
+    }
     nodeGrp.appendChild(g);
   });
 
