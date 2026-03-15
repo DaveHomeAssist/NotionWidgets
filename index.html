@@ -244,7 +244,7 @@
   }
 
   .widget-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-bottom: 22px;
   }
 
@@ -259,6 +259,7 @@
   .widget-card.approval { box-shadow: inset 0 3px 0 0 var(--green); }
   .widget-card.quest { box-shadow: inset 0 3px 0 0 var(--gold); }
   .widget-card.status { box-shadow: inset 0 3px 0 0 var(--violet); }
+  .widget-card.map { box-shadow: inset 0 3px 0 0 #fb923c; }
 
   .widget-top {
     display: flex;
@@ -387,59 +388,57 @@
 <div class="page">
   <section class="hero">
     <div class="hero-card">
-      <div class="eyebrow">Single-file Notion embeds</div>
-      <h1>Optional widgets for polished Notion systems.</h1>
+      <div class="eyebrow">A personal project by Dave Robertson</div>
+      <h1>Small widgets, better Notion pages.</h1>
       <p class="hero-copy">
-        NotionWidgets is a small catalog of self-contained HTML widgets hosted on GitHub Pages. Each widget is configured with URL parameters, works inside a Notion iframe, and is designed to enhance a template without becoming a dependency.
+        I kept wanting little interactive pieces inside my Notion workspace &mdash; a status panel here, a quest tracker there &mdash; but nothing existed that didn't require a backend or an API key. So I started building them myself: single HTML files, configured entirely through URL parameters, designed to drop into a Notion embed and just work.
       </p>
       <div class="chip-row">
-        <span class="chip">Single HTML</span>
-        <span class="chip">URL Params</span>
+        <span class="chip">Single HTML files</span>
+        <span class="chip">URL-configured</span>
+        <span class="chip">No backend</span>
         <span class="chip">Iframe-safe</span>
-        <span class="chip">No Widget Mode</span>
       </div>
       <div class="meta-row">
-        <span class="meta">Live site: <code>davehomeassist.github.io/NotionWidgets/</code></span>
-        <span class="meta">Current pass: <code>v1.2 hardening</code></span>
+        <span class="meta">Live at <code>davehomeassist.github.io/NotionWidgets/</code></span>
       </div>
     </div>
 
     <div class="hero-side">
       <div class="stat">
-        <div class="stat-title">Live widgets</div>
-        <div class="stat-value">3</div>
-        <p class="stat-copy">Project tracking, gamified tasks, and client-facing approval review.</p>
+        <div class="stat-title">Widgets live</div>
+        <div class="stat-value">4</div>
+        <p class="stat-copy">Approvals, quest tracking, project status, and a full workspace topology map.</p>
       </div>
       <div class="stat">
-        <div class="stat-title">Configuration model</div>
+        <div class="stat-title">How they work</div>
         <div class="stat-value">URL only</div>
-        <p class="stat-copy">No backend, no API keys, and no build step. Paste a widget URL into Notion and resize the embed block.</p>
+        <p class="stat-copy">No API keys, no build step. Configure with URL parameters, paste into Notion, done.</p>
       </div>
     </div>
   </section>
 
   <section class="info-grid">
     <article class="info-card">
-      <h2>Built for Notion</h2>
-      <p>Every widget is designed for narrow iframe widths and should stay legible without horizontal scrolling in common Notion embed sizes.</p>
+      <h2>Notion-native feel</h2>
+      <p>Each widget is designed to feel at home inside a Notion embed &mdash; clean at narrow widths, readable without scrolling, and visually consistent with the page around it.</p>
     </article>
     <article class="info-card">
-      <h2>Optional by design</h2>
-      <p>These widgets should improve the template experience, not replace core Notion structure. The surrounding page should still function with no embed present.</p>
+      <h2>Remove it, nothing breaks</h2>
+      <p>I treat these as polish, not plumbing. Your Notion page should work perfectly fine without any widget present. They make things nicer, not dependent.</p>
     </article>
     <article class="info-card">
-      <h2>Safe configuration</h2>
-      <p>Token inputs are allowlisted, invalid values fall back safely, and user-supplied content is rendered with DOM APIs instead of unsafe HTML insertion.</p>
+      <h2>No trust required</h2>
+      <p>Everything runs client-side from a static file. No data leaves your browser, inputs are sanitized, and invalid params just fall back quietly.</p>
     </article>
   </section>
 
   <section>
     <div class="section-header">
       <div>
-        <div class="section-title">Widget catalog</div>
-        <p class="section-copy">Each card links to the live widget and shows a ready-to-copy example URL pattern.</p>
+        <div class="section-title">What I've built so far</div>
+        <p class="section-copy">Each widget is live on GitHub Pages. Click through to see it, or grab the example URL to try it in your own Notion setup.</p>
       </div>
-      <div class="url-note">Hosted on GitHub Pages</div>
     </div>
 
     <div class="widget-grid">
@@ -511,38 +510,57 @@
           <a class="link" href="project-status.html?name=Website%20Redesign&client=Meridian%20Studios&status=in-progress&deadline=2026-04-30&phases=%5B%7B%22name%22%3A%22Discovery%22%2C%22pct%22%3A100%7D%2C%7B%22name%22%3A%22Design%22%2C%22pct%22%3A65%7D%2C%7B%22name%22%3A%22Launch%22%2C%22pct%22%3A10%7D%5D&stats=%5B%7B%22label%22%3A%22Tasks%22%2C%22value%22%3A%2218%2F24%22%2C%22color%22%3A%22on-track%22%7D%2C%7B%22label%22%3A%22Budget%22%2C%22value%22%3A%2272%25%22%2C%22color%22%3A%22warning%22%7D%5D">Open example</a>
         </div>
       </article>
+
+      <article class="widget-card map">
+        <div class="widget-top">
+          <div class="icon">🗺</div>
+          <span class="chip">Visualization</span>
+        </div>
+        <div>
+          <h3>Workspace Topology Map</h3>
+          <p class="widget-copy">An interactive D3 + Dagre graph of your Notion workspace structure. Pan, zoom, click to inspect nodes, toggle heatmaps, and filter by layer or focus mode.</p>
+        </div>
+        <div class="url-block">
+          <span class="code-label">Live URL</span>
+          <code>https://davehomeassist.github.io/NotionWidgets/notion-workspace-map.html</code>
+        </div>
+        <div class="link-row">
+          <a class="link primary" href="notion-workspace-map.html">Open map</a>
+        </div>
+      </article>
     </div>
   </section>
 
   <section>
     <div class="section-header">
       <div>
-        <div class="section-title">Embed in three steps</div>
-        <p class="section-copy">Keep the workflow lightweight: configure a URL, paste it into Notion, then resize the embed block.</p>
+        <div class="section-title">How to use them</div>
+        <p class="section-copy">The whole point is that this stays simple. Three steps, no tooling.</p>
       </div>
     </div>
 
     <div class="how-grid">
       <article class="how-card">
         <div class="how-step-num">01</div>
-        <h3>Choose a widget</h3>
-        <p>Start with the live URL or one of the example links above. Structured params should be passed as JSON arrays.</p>
+        <h3>Pick a widget</h3>
+        <p>Grab the live URL from any card above, or start with an example link to see it pre-configured with sample data.</p>
       </article>
       <article class="how-card">
         <div class="how-step-num">02</div>
-        <h3>Paste into Notion</h3>
-        <p>Use the `/embed` command in Notion and paste the widget URL. GitHub Pages-hosted files embed cleanly without a build pipeline.</p>
+        <h3>Embed in Notion</h3>
+        <p>Type <code>/embed</code> in Notion, paste the URL, and resize the block. That's it &mdash; no build step, no API key, no config file.</p>
       </article>
       <article class="how-card">
         <div class="how-step-num">03</div>
-        <h3>Keep the page useful without it</h3>
-        <p>Widgets are optional enhancements. The surrounding template should still make sense if the embed is removed or never added.</p>
+        <h3>Customize with URL params</h3>
+        <p>Change the title, data, colors, or behavior by editing the URL parameters. Each widget documents its own param set.</p>
       </article>
     </div>
   </section>
 
   <div class="footer">
-    Canonical params, accepted token values, and v1.2 hardening notes live in <code>README.md</code>.
+    Built by Dave Robertson &middot; Philadelphia, PA<br>
+    More details and param docs in <code>README.md</code> on GitHub.
   </div>
 </div>
 </body>
