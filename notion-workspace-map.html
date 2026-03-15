@@ -3,1071 +3,784 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>System Map | Dave's Notion Workspace</title>
+  <title>Notion Workspace Map</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
   <style>
     :root {
-      --bg:       #080c14;
-      --surface:  #0e1524;
-      --panel:    #131e30;
-      --panel-2:  #192437;
-      --border:   rgba(255,255,255,0.07);
-      --muted:    #7a90b8;
-      --text:     #e8eef8;
-      --shadow:   0 20px 60px rgba(0,0,0,0.4);
-      --radius:   16px;
-      --radius-sm:10px;
+      --bg:      #070b12;
+      --surface: #0d1420;
+      --panel:   #121c2c;
+      --panel-2: #172236;
+      --border:  rgba(255,255,255,0.07);
+      --muted:   #6b85ae;
+      --text:    #e4ecf8;
+      --radius:  14px;
+      --radius-sm: 9px;
 
-      /* Layer accent colours */
-      --c-hub:      #818cf8; /* indigo */
-      --c-software: #34d399; /* emerald */
-      --c-db:       #38bdf8; /* sky */
-      --c-page:     #a78bfa; /* violet */
-      --c-home:     #fb923c; /* orange */
-      --c-life:     #f472b6; /* pink */
-      --c-gov:      #facc15; /* yellow */
+      --c-hub:      #818cf8;
+      --c-software: #34d399;
+      --c-database: #38bdf8;
+      --c-page:     #a78bfa;
+      --c-home:     #fb923c;
+      --c-gov:      #facc15;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    html, body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100%; }
+    body { padding: 18px; }
 
-    html, body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100%;
-    }
+    .page { max-width: 1640px; margin: 0 auto; display: grid; gap: 14px; }
 
-    body { padding: 20px; }
-
-    .page {
-      max-width: 1600px;
-      margin: 0 auto;
-      display: grid;
-      gap: 16px;
-    }
-
-    /* ── Hero ── */
     .hero {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px 28px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 24px;
-      align-items: start;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px 24px; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;
     }
 
     .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(129,140,248,0.1);
-      color: #a5b4fc;
-      border: 1px solid rgba(129,140,248,0.22);
-      border-radius: 999px;
-      padding: 5px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      font-family: 'DM Mono', monospace;
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(129,140,248,0.09); color: #a5b4fc;
+      border: 1px solid rgba(129,140,248,0.2); border-radius: 999px;
+      padding: 4px 12px; font-size: 10.5px; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase; font-family: 'DM Mono', monospace;
     }
 
-    h1 {
-      margin: 12px 0 8px;
-      font-size: clamp(26px, 3.5vw, 40px);
-      font-weight: 800;
-      line-height: 1.05;
-      letter-spacing: -0.02em;
-    }
+    h1 { margin: 10px 0 6px; font-size: clamp(22px, 3vw, 36px); font-weight: 800; letter-spacing: -0.02em; }
+    .hero p { color: var(--muted); font-size: 13px; line-height: 1.6; max-width: 55ch; }
 
-    .hero p { color: var(--muted); font-size: 14px; line-height: 1.6; max-width: 60ch; }
-
-    .hero-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
+    .hero-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 
     .stat {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      text-align: center;
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 14px; text-align: center;
     }
+    .stat-val { font-size: 24px; font-weight: 800; font-family: 'DM Mono', monospace; }
+    .stat-lbl { color: var(--muted); font-size: 10px; margin-top: 2px; letter-spacing: 0.04em; text-transform: uppercase; }
 
-    .stat-val { font-size: 26px; font-weight: 800; font-family: 'DM Mono', monospace; }
-    .stat-lbl { color: var(--muted); font-size: 11px; margin-top: 3px; letter-spacing: 0.03em; }
-
-    /* ── Toolbar ── */
     .toolbar {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
     }
 
     .field {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 8px 12px;
-      flex: 1;
-      min-width: 160px;
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 7px 11px; flex: 1; min-width: 140px;
     }
-
-    .field label { display: block; font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 4px; }
+    .field label { display: block; font-size: 9.5px; color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 3px; }
     .field input, .field select { width: 100%; background: transparent; border: 0; outline: 0; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
     .field select option { background: var(--panel); }
 
-    .segmented {
-      display: flex;
-      gap: 4px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 4px;
+    .seg { display: flex; gap: 3px; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; }
+    .seg button {
+      border: 0; background: transparent; color: var(--muted); padding: 6px 11px; border-radius: 7px;
+      cursor: pointer; font-size: 11.5px; font-weight: 700; font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: all 130ms;
     }
+    .seg button.active, .seg button:hover { background: rgba(129,140,248,0.14); color: var(--text); }
 
-    .segmented button {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      padding: 7px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 700;
-      font-family: 'DM Sans', sans-serif;
-      white-space: nowrap;
-      transition: all 140ms ease;
+    .icon-btn {
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--muted); padding: 8px 14px; cursor: pointer; font-size: 11.5px; font-weight: 700;
+      font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: color 130ms;
     }
+    .icon-btn:hover { color: var(--text); }
 
-    .segmented button.active, .segmented button:hover {
-      background: rgba(129,140,248,0.15);
-      color: var(--text);
-    }
+    .main { display: grid; grid-template-columns: 1fr 290px; gap: 14px; align-items: start; }
 
-    .reset-btn {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--muted);
-      padding: 9px 16px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 700;
-      font-family: 'DM Sans', sans-serif;
-      white-space: nowrap;
-      transition: color 140ms ease;
-    }
-
-    .reset-btn:hover { color: var(--text); }
-
-    /* ── Main layout ── */
-    .main {
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 16px;
-      align-items: start;
-    }
-
-    /* ── Canvas ── */
-    .canvas {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px;
-    }
+    .canvas { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 
     .canvas-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 4px 4px 12px;
-      flex-wrap: wrap;
-      gap: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px;
     }
 
-    .canvas-title { font-size: 15px; font-weight: 800; }
+    .canvas-title { font-size: 13px; font-weight: 800; }
+    .canvas-hint { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
 
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--muted);
-      font-size: 11px;
-      font-family: 'DM Mono', monospace;
-    }
-
-    .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10.5px; font-family: 'DM Mono', monospace; }
+    .dot { width: 7px; height: 7px; border-radius: 999px; }
 
     .map-wrap {
-      overflow: auto;
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 12px;
-      background: radial-gradient(circle at 20% 20%, rgba(129,140,248,0.06), transparent 40%),
-                  radial-gradient(circle at 80% 70%, rgba(52,211,153,0.05), transparent 40%),
-                  #080d18;
-      max-height: 78vh;
+      overflow: hidden; cursor: grab; min-height: 640px; height: 72vh;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(129,140,248,0.07), transparent 35%),
+        radial-gradient(circle at 82% 65%, rgba(52,211,153,0.05), transparent 35%),
+        radial-gradient(circle at 50% 90%, rgba(251,146,60,0.04), transparent 30%),
+        #070d18;
     }
+    .map-wrap.panning { cursor: grabbing; }
 
-    svg {
-      width: 100%;
-      min-width: 1440px;
-      height: auto;
-      display: block;
+    svg { display: block; width: 100%; }
+
+    .edge { fill: none; stroke-width: 1.4; }
+    .edge.structure { stroke: rgba(120,145,190,0.28); }
+    .edge.data      { stroke: rgba(52,211,153,0.35); stroke-dasharray: 5,3; }
+    .edge.reference { stroke: rgba(251,146,60,0.3); stroke-dasharray: 2,4; }
+    .edge.active    { stroke-width: 2.2 !important; filter: drop-shadow(0 0 4px currentColor); }
+
+    .node {
+      cursor: pointer;
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform 0.18s ease-out;
     }
-
-    .grid-bg { fill: url(#grid); }
-
-    .edge {
-      fill: none;
-      stroke: rgba(120,140,180,0.22);
-      stroke-width: 1.5;
-    }
-
-    .edge.highlight {
-      stroke: rgba(129,140,248,0.7);
-      stroke-width: 2.5;
-      filter: drop-shadow(0 0 5px rgba(129,140,248,0.25));
-    }
-
-    .node { cursor: pointer; }
-
+    .node:hover { transform: translateY(-3px); }
     .node .bg {
-      fill: rgba(13,20,36,0.95);
-      stroke: rgba(255,255,255,0.09);
-      stroke-width: 1;
-      transition: stroke 150ms ease, filter 150ms ease;
+      fill: rgba(12,19,33,0.96); stroke: rgba(255,255,255,0.09); stroke-width: 1;
+      rx: 13; transition: stroke 140ms, filter 140ms;
     }
+    .node:hover .bg { stroke: rgba(255,255,255,0.2); }
+    .node.selected .bg { stroke-width: 1.8; }
+    .node.dimmed { opacity: 0.07 !important; pointer-events: none; }
+    .node .heat-ring { fill: none; stroke-width: 6; opacity: 0; transition: opacity 300ms; }
+    .node.heat-visible .heat-ring { opacity: 0.18; }
+    .node .n-bar { rx: 999; }
+    .node .n-type { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 500; }
+    .node .n-name { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 800; fill: #e4ecf8; }
+    .node .n-meta { font-family: 'DM Mono', monospace; font-size: 9.5px; fill: #6b85ae; }
+    .node .n-degree { font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700; }
 
-    .node:hover .bg { stroke: rgba(255,255,255,0.22); }
-
-    .node.selected .bg {
-      stroke: rgba(129,140,248,0.85);
-      stroke-width: 1.8;
-      filter: drop-shadow(0 0 18px rgba(129,140,248,0.18));
-    }
-
-    .node.dimmed { pointer-events: none; opacity: 0.1 !important; }
-
-    .node .n-type {
-      font-family: 'DM Mono', monospace;
-      font-size: 9.5px;
-      font-weight: 500;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .node .n-title {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12.5px;
-      font-weight: 800;
-      fill: #e8eef8;
-    }
-
-    .node .n-sub {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      fill: #7a90b8;
-    }
-
-    /* ── Detail panel ── */
     .detail {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px;
-      position: sticky;
-      top: 20px;
-      max-height: calc(100vh - 40px);
-      overflow-y: auto;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px; position: sticky; top: 18px; max-height: calc(100vh - 36px); overflow-y: auto;
     }
-
-    .detail::-webkit-scrollbar { width: 4px; }
+    .detail::-webkit-scrollbar { width: 3px; }
     .detail::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 999px; }
 
-    .d-stack { display: grid; gap: 10px; }
+    .d-stack { display: grid; gap: 8px; }
+    .d-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; }
 
-    .d-card {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-    }
+    .d-kicker { font-family: 'DM Mono', monospace; font-size: 9.5px; color: #a5b4fc; letter-spacing: 0.07em; text-transform: uppercase; }
+    .d-title { font-size: 17px; font-weight: 800; margin: 5px 0 7px; letter-spacing: -0.01em; line-height: 1.15; }
+    .d-desc { color: var(--muted); font-size: 12.5px; line-height: 1.55; }
 
-    .d-kicker {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      color: #a5b4fc;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
-
-    .d-title { font-size: 20px; font-weight: 800; margin: 6px 0 8px; letter-spacing: -0.01em; line-height: 1.1; }
-    .d-desc { color: var(--muted); font-size: 13px; line-height: 1.55; }
-
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
     .chip {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); border-radius: 999px;
+      padding: 3px 9px; font-size: 10.5px; font-weight: 700; color: var(--text); font-family: 'DM Mono', monospace;
     }
 
-    .kv {
-      display: grid;
-      grid-template-columns: 90px 1fr;
-      gap: 8px;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
+    .kv { display: grid; grid-template-columns: 80px 1fr; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .kv:last-child { border: 0; }
+    .kv .k { color: var(--muted); font-size: 11px; }
+    .kv .v { font-weight: 600; }
 
-    .kv:last-child { border-bottom: 0; }
-    .kv .k { color: var(--muted); font-size: 12px; }
-    .kv .v { font-weight: 600; word-break: break-all; }
-
-    .d-list { margin: 4px 0 0 16px; }
-    .d-list li { color: var(--muted); font-size: 13px; padding: 2px 0; line-height: 1.45; }
+    .d-list { margin: 6px 0 0 14px; }
+    .d-list li { color: var(--muted); font-size: 12px; padding: 2px 0; line-height: 1.4; }
+    .d-list li span { color: rgba(107,133,174,0.6); }
 
     .notion-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 10px;
-      color: #818cf8;
-      font-size: 12px;
-      font-weight: 700;
-      text-decoration: none;
-      font-family: 'DM Mono', monospace;
+      display: inline-flex; align-items: center; gap: 5px; margin-top: 9px;
+      color: #818cf8; font-size: 11.5px; font-weight: 700; text-decoration: none; font-family: 'DM Mono', monospace;
     }
-
     .notion-link:hover { text-decoration: underline; }
+
+    .impact-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 6px; }
+    .impact-table th {
+      color: var(--muted); font-size: 10px; text-align: left; padding: 3px 6px; letter-spacing: 0.05em;
+      font-family: 'DM Mono', monospace; text-transform: uppercase; border-bottom: 1px solid var(--border);
+    }
+    .impact-table td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .impact-table tr:last-child td { border: 0; }
+    .impact-table .deg { font-family: 'DM Mono', monospace; font-weight: 700; text-align: right; }
 
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 
-    @media (max-width: 1100px) {
-      .main { grid-template-columns: 1fr; }
-      .detail { position: static; max-height: none; }
-      .hero { grid-template-columns: 1fr; }
-      .hero-stats { grid-template-columns: repeat(4, 1fr); }
-    }
+    @media (max-width: 1100px) { .main { grid-template-columns: 1fr; } .detail { position: static; max-height: none; } }
+    @media (max-width: 700px) { .hero { grid-template-columns: 1fr; } .hero-stats { grid-template-columns: repeat(2,1fr); } }
 
-    @media (max-width: 640px) {
-      body { padding: 12px; }
-      .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:      #f0f2f7;
+        --surface: #ffffff;
+        --panel:   #f5f7fc;
+        --panel-2: #edf0f8;
+        --border:  rgba(0,0,0,0.08);
+        --muted:   #6b7a99;
+        --text:    #1a2238;
+      }
+      html, body { background: var(--bg); }
+      .map-wrap {
+        background:
+          radial-gradient(circle at 15% 20%, rgba(129,140,248,0.06), transparent 35%),
+          radial-gradient(circle at 82% 65%, rgba(52,211,153,0.04), transparent 35%),
+          radial-gradient(circle at 50% 90%, rgba(251,146,60,0.03), transparent 30%),
+          #e8ebf5;
+      }
+      .node .bg { fill: rgba(255,255,255,0.97); stroke: rgba(0,0,0,0.1); }
+      .node:hover .bg { stroke: rgba(0,0,0,0.2); }
+      .node .n-name { fill: #1a2238; }
+      .node .n-meta { fill: #6b7a99; }
+      .edge.structure { stroke: rgba(80,100,150,0.3); }
+      .edge.data      { stroke: rgba(16,160,100,0.4); }
+      .edge.reference { stroke: rgba(200,100,20,0.35); }
+      .impact-table td { border-bottom-color: rgba(0,0,0,0.05); }
     }
   </style>
 </head>
 <body>
-  <div class="sr-only" id="announce" aria-live="polite" aria-atomic="true"></div>
-  <main class="page">
-
-    <header class="hero">
-      <div>
-        <div class="eyebrow">🗂 Dave's Notion Workspace · System Map</div>
-        <h1>Workspace Topology</h1>
-        <p>Live view of your actual Notion structure — hubs, databases, project pages, and the connections between them. Click any node to inspect it.</p>
-      </div>
-      <div class="hero-stats" id="heroStats"></div>
-    </header>
-
-    <div class="toolbar">
-      <div class="field">
-        <label for="search">Search</label>
-        <input id="search" type="text" placeholder="Name, type, layer…" autocomplete="off" />
-      </div>
-      <div class="field" style="max-width:160px">
-        <label for="layerFilter">Layer</label>
-        <select id="layerFilter"></select>
-      </div>
-      <div class="field" style="max-width:160px">
-        <label for="typeFilter">Type</label>
-        <select id="typeFilter"></select>
-      </div>
-      <div class="segmented" id="focusModes"></div>
-      <button class="reset-btn" id="resetBtn">↺ Reset</button>
+<div class="sr-only" id="announce" aria-live="polite"></div>
+<main class="page">
+  <header class="hero">
+    <div>
+      <div class="eyebrow">🗂 Dave's Notion Workspace · System Map v2</div>
+      <h1>Workspace Topology</h1>
+      <p>Auto-layout graph of your actual Notion structure. Pan &amp; zoom the canvas. Click any node to inspect, or click again to focus its dependency tree.</p>
     </div>
+    <div class="hero-stats" id="heroStats"></div>
+  </header>
 
-    <div class="main">
-      <section class="canvas">
-        <div class="canvas-head">
+  <div class="toolbar">
+    <div class="field" style="max-width:220px">
+      <label for="search">Search</label>
+      <input id="search" type="text" placeholder="Name, type, tag…" autocomplete="off" />
+    </div>
+    <div class="field" style="max-width:140px">
+      <label for="layerF">Layer</label>
+      <select id="layerF"></select>
+    </div>
+    <div class="seg" id="focusModes"></div>
+    <button class="icon-btn" id="heatBtn">🌡 Heatmap</button>
+    <button class="icon-btn" id="fitBtn">⊡ Fit</button>
+    <button class="icon-btn" id="resetBtn">↺ Reset</button>
+  </div>
+
+  <div class="main">
+    <section class="canvas">
+      <div class="canvas-head">
+        <div>
           <div class="canvas-title" id="canvasTitle">Full Topology</div>
+          <div class="canvas-hint">Scroll to zoom · drag to pan · click node to focus</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
           <div class="legend" id="legend"></div>
+          <div class="legend" style="gap:12px">
+            <span class="legend-item"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="rgba(120,145,190,0.5)" stroke-width="1.5"/></svg> structure</span>
+            <span class="legend-item"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="rgba(52,211,153,0.6)" stroke-width="1.5" stroke-dasharray="5,3"/></svg> data flow</span>
+            <span class="legend-item"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="rgba(251,146,60,0.55)" stroke-width="1.5" stroke-dasharray="2,4"/></svg> reference</span>
+          </div>
         </div>
-        <div class="map-wrap">
-          <svg id="map" viewBox="0 0 1440 860" role="img" aria-label="Notion workspace system map"></svg>
-        </div>
-      </section>
+      </div>
+      <div class="map-wrap" id="mapWrap">
+        <svg id="map" role="img" aria-label="Notion workspace system map">
+          <defs>
+            <marker id="arr" viewBox="0 -4 8 8" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,-4L8,0L0,4" fill="rgba(120,145,190,0.4)"/>
+            </marker>
+            <marker id="arr-data" viewBox="0 -4 8 8" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,-4L8,0L0,4" fill="rgba(52,211,153,0.5)"/>
+            </marker>
+          </defs>
+          <g id="zoomGroup">
+            <g id="edgeGroup"></g>
+            <g id="nodeGroup"></g>
+          </g>
+        </svg>
+      </div>
+    </section>
 
-      <aside class="detail">
-        <div class="d-stack" id="detailPanel"></div>
-      </aside>
-    </div>
+    <aside class="detail">
+      <div class="d-stack" id="detailPanel"></div>
+    </aside>
+  </div>
+</main>
 
-  </main>
+<script>
+const layers = {
+  'Hub': '#818cf8',
+  'Database': '#38bdf8',
+  'Page': '#a78bfa',
+  'Governance': '#facc15',
+};
 
-  <script>
-  /* ─────────────────────────────────────────
-     Layer definitions
-  ───────────────────────────────────────── */
-  const layers = {
-    'Hub':      '#818cf8',
-    'Software': '#34d399',
-    'Database': '#38bdf8',
-    'Page':     '#a78bfa',
-    'Home':     '#fb923c',
-    'Life':     '#f472b6',
-    'Governance':'#facc15',
+const NW = 220;
+const NH = 88;
+
+const nodes = [
+  { id:'home-dashboard', name:'HOME | Dashboard', layer:'Hub', type:'Top Hub', status:'Active', url:'https://notion.so/f3fe2637a59d402781e3d7ca07bfbc9c', desc:'Primary workspace entry point. The single front door across all life areas.', tags:['top-level','dashboard','navigation'] },
+  { id:'tech-ai', name:'03 | Tech & AI', layer:'Hub', type:'Area Hub', status:'Active', url:'https://notion.so/d7ccbff1c1474efbb2d7f1d50501df4d', desc:'Top-level hub for all technology, AI, and software work.', tags:['hub','area','tech'] },
+  { id:'work-career', name:'02 | Work & Career', layer:'Hub', type:'Area Hub', status:'Active', url:'https://notion.so/238255fc8f44808ca62ecb57f86b3787', desc:'Hub for professional work, career development, and business projects.', tags:['hub','area','work'] },
+  { id:'home-family', name:'05 | Home & Family', layer:'Hub', type:'Area Hub', status:'Active', url:'https://notion.so/2ab255fc8f4480708639d2973408f334', desc:'Hub for home improvement, family projects, and household management.', tags:['hub','area','home'] },
+  { id:'software-dev', name:'Software Development', layer:'Hub', type:'Control Panel', status:'Active', url:'https://notion.so/31f255fc8f44800ba24cfe8811c9b815', desc:'Main control panel for all software projects. Houses linked views of all key DBs: AI Projects, Dev Work, Bugs, Capture, Decisions, Naming, Context.', tags:['control-panel','software','hub'] },
+  { id:'creative-hub', name:'HUB | Creative Projects', layer:'Hub', type:'Sub-Hub', status:'Active', url:'https://notion.so/1f2255fc8f4480f78f3ef9b81c90398f', desc:'Creative project hub. Connected to DB | Creative Projects.', tags:['hub','creative'] },
+  { id:'home-hub', name:'HUB | Home Life', layer:'Hub', type:'Sub-Hub', status:'Active', url:'https://notion.so/c5aaa5b9502d4b118c9cd9f5bec48388', desc:'Home life management hub. Household, family operations, personal projects.', tags:['hub','home','life'] },
+  { id:'hub-technology', name:'HUB | Technology', layer:'Hub', type:'Sub-Hub', status:'Active', url:'https://notion.so/2ab255fc8f448015b092ea87c2f1b3a2', desc:'Technology-specific navigation hub under Tech & AI.', tags:['hub','technology'] },
+  { id:'hub-workshop', name:'HUB | Workshop & Garden', layer:'Hub', type:'Sub-Hub', status:'Active', url:'https://notion.so/2ff255fc8f4480beb091fe023cbfce90', desc:'Hub for workshop, garage, and garden projects.', tags:['hub','workshop','garden'] },
+  { id:'db-ai-projects', name:'DB | AI Projects Tracker', layer:'Database', type:'Database', status:'Active', url:'https://notion.so/78597fcad9b24222b7b8bc9aa2ff83ae', desc:'Canonical product tracker. PromptLab, Garden OS, NotionWidgets. Authoritative "product" object — work items, bugs, and decisions all relate back here.', tags:['database','products','tracker'] },
+  { id:'db-dev-work', name:'DB | Software Development', layer:'Database', type:'Database', status:'Active', url:'https://notion.so/744f9024122e433faca9ac58411a8086', desc:'Execution layer. All dev work items across all software projects. Relations to AI Projects Tracker.', tags:['database','execution','dev-work'] },
+  { id:'db-bugs', name:'DB | Bug & Issue Backlog', layer:'Database', type:'Database', status:'Active', url:'https://notion.so/3a119da939854a7f9ce19ad3a39116a8', desc:'Quality layer. All bugs and issues. Relates to AI Projects Tracker via Product relation.', tags:['database','quality','bugs'] },
+  { id:'db-capture', name:'DB | AI Conversation Capture', layer:'Database', type:'Database', status:'Active', url:'https://notion.so/baf784e9a1e34a7db4dde6e2ca497c97', desc:'Intake layer. AI conversation extracts that yield dev work or decision records.', tags:['database','capture','intake','ai'] },
+  { id:'db-decisions', name:'DB | Technical Decisions Log', layer:'Database', type:'Database', status:'Active', url:'https://notion.so/c9512134df8141fe8f3403536a7fdc4e', desc:'Governance layer. Records all technical decisions (ADRs). Fed by Capture and Dev Work.', tags:['database','governance','decisions'] },
+  { id:'db-naming', name:'DB | Naming Decisions', layer:'Governance', type:'Database', status:'Active', url:'https://notion.so/e81391c8732f4d689a56743063a1fbb7', desc:'Tracks naming decisions and terminology standards across workspace and codebase.', tags:['database','governance','naming'] },
+  { id:'db-context', name:'DB | Context Templates', layer:'Governance', type:'Database', status:'Active', url:'https://notion.so/b1fdd9d38b574bf89e02bda970ae0945', desc:'Library of reusable AI context templates for prompting Claude consistently across projects.', tags:['database','governance','context','prompting'] },
+  { id:'db-projects', name:'DB | Projects', layer:'Database', type:'Database', status:'Active', url:'https://notion.so/1f2255fc8f448128994df83b59539ded', desc:'General subsystems DB (e.g. Embedded Notion Widgets). Separate from AI Projects Tracker which tracks products.', tags:['database','projects','systems'] },
+  { id:'db-creative', name:'DB | Creative Projects', layer:'Database', type:'Database', status:'Active', url:'https://notion.so/5200d1e8d4c54a0699758f8f9b53db8d', desc:'Tracks creative projects (non-software). Lives under HUB | Creative Projects.', tags:['database','creative'] },
+  { id:'db-home', name:'DB | Projects (Robertsons)', layer:'Database', type:'Database', status:'Active', url:'https://notion.so/584a7ccebb0f41e5b046e4e6a1dc0a95', desc:'Home and family projects DB used within HUB | Home Life.', tags:['database','home','family'] },
+  { id:'sft-promptlab', name:'SFT | PromptLab', layer:'Page', type:'Project Brief', status:'Active', url:'https://notion.so/31f255fc8f44807abbd8d0dd4d62cb89', desc:'Front door for PromptLab. Linked DB views filtered to Prompt Lab, key docs, architecture embed, and archive.', tags:['project','promptlab','brief'] },
+  { id:'sft-garden-os', name:'SFT | Garden OS', layer:'Page', type:'Project Brief', status:'Active', url:'https://notion.so/148fe68675df406b86752dfe086e051a', desc:'Front door for Garden OS (raised bed planner). Linked views, architecture docs, iteration notes.', tags:['project','garden-os','brief'] },
+  { id:'brief-promptlab', name:'BRIEF | PromptLab', layer:'Page', type:'Brief', status:'Active', url:'https://notion.so/323255fc8f4481848e7ff3acffd8ca72', desc:'Structured brief page for PromptLab project. At-a-glance, key docs, operational views, archive.', tags:['brief','promptlab'] },
+  { id:'brief-garden-os', name:'BRIEF | Garden OS', layer:'Page', type:'Brief', status:'Active', url:'https://notion.so/323255fc8f44816f9d9dd6e708f0246c', desc:'Structured brief page for Garden OS. At-a-glance, key docs, operational views.', tags:['brief','garden-os'] },
+  { id:'ia-analysis', name:'DOC | IA Analysis', layer:'Page', type:'Reference Doc', status:'Active', url:'https://notion.so/310255fc8f4480ae99afee6ceb1b5d15', desc:'Workspace Information Architecture Analysis. Reference for consolidation and structural decisions.', tags:['doc','ia','workspace'] },
+];
+
+const edges = [
+  { s:'home-dashboard', t:'tech-ai', type:'structure' },
+  { s:'home-dashboard', t:'work-career', type:'structure' },
+  { s:'home-dashboard', t:'home-family', type:'structure' },
+  { s:'tech-ai', t:'software-dev', type:'structure' },
+  { s:'tech-ai', t:'hub-technology', type:'structure' },
+  { s:'work-career', t:'creative-hub', type:'structure' },
+  { s:'home-family', t:'home-hub', type:'structure' },
+  { s:'home-family', t:'hub-workshop', type:'structure' },
+  { s:'software-dev', t:'db-ai-projects', type:'structure' },
+  { s:'software-dev', t:'db-dev-work', type:'structure' },
+  { s:'software-dev', t:'db-bugs', type:'structure' },
+  { s:'software-dev', t:'db-capture', type:'structure' },
+  { s:'software-dev', t:'db-decisions', type:'structure' },
+  { s:'software-dev', t:'db-projects', type:'structure' },
+  { s:'software-dev', t:'db-context', type:'reference' },
+  { s:'software-dev', t:'sft-promptlab', type:'structure' },
+  { s:'software-dev', t:'sft-garden-os', type:'structure' },
+  { s:'db-capture', t:'db-dev-work', type:'data' },
+  { s:'db-capture', t:'db-decisions', type:'data' },
+  { s:'db-dev-work', t:'db-ai-projects', type:'data' },
+  { s:'db-bugs', t:'db-ai-projects', type:'data' },
+  { s:'db-decisions', t:'db-ai-projects', type:'data' },
+  { s:'db-naming', t:'db-decisions', type:'reference' },
+  { s:'db-context', t:'db-capture', type:'reference' },
+  { s:'hub-workshop', t:'sft-garden-os', type:'structure' },
+  { s:'creative-hub', t:'db-creative', type:'structure' },
+  { s:'home-hub', t:'db-home', type:'structure' },
+  { s:'sft-promptlab', t:'brief-promptlab', type:'reference' },
+  { s:'sft-garden-os', t:'brief-garden-os', type:'reference' },
+  { s:'software-dev', t:'ia-analysis', type:'reference' },
+];
+
+const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
+const adjacency = {};
+edges.forEach(({ s, t }) => {
+  adjacency[s] ??= new Set();
+  adjacency[t] ??= new Set();
+  adjacency[s].add(t);
+  adjacency[t].add(s);
+});
+
+const degree = {};
+nodes.forEach(n => { degree[n.id] = 0; });
+edges.forEach(({ s, t }) => { degree[s]++; degree[t]++; });
+const maxDegree = Math.max(...Object.values(degree));
+
+const state = {
+  search: '',
+  layer: 'All',
+  focus: 'All',
+  selectedId: 'home-dashboard',
+  focusNode: null,
+  heatmap: false,
+};
+
+let layoutCache = null;
+
+function computeLayout(visibleIds) {
+  const key = [...visibleIds].sort().join(',');
+  if (layoutCache?.key === key) return layoutCache.positions;
+
+  if (!visibleIds.size) {
+    layoutCache = { key, positions: {}, w: 800, h: 520, offX: 0, offY: 0 };
+    return layoutCache.positions;
+  }
+
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir: 'TB', ranksep: 42, nodesep: 18, marginx: 20, marginy: 20 });
+  g.setDefaultEdgeLabel(() => ({}));
+
+  visibleIds.forEach(id => g.setNode(id, { width: NW, height: NH }));
+  edges.forEach(({ s, t }) => {
+    if (visibleIds.has(s) && visibleIds.has(t)) g.setEdge(s, t);
+  });
+
+  dagre.layout(g);
+
+  const positions = {};
+  visibleIds.forEach(id => {
+    const n = g.node(id);
+    if (!n) return;
+    positions[id] = { x: n.x - NW / 2, y: n.y - NH / 2 };
+  });
+
+  if (!Object.keys(positions).length) {
+    layoutCache = { key, positions: {}, w: 800, h: 520, offX: 0, offY: 0 };
+    return layoutCache.positions;
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  Object.values(positions).forEach(({ x, y }) => {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + NW);
+    maxY = Math.max(maxY, y + NH);
+  });
+
+  layoutCache = {
+    key,
+    positions,
+    w: maxX - minX + 60,
+    h: maxY - minY + 60,
+    offX: minX - 30,
+    offY: minY - 30,
+  };
+  return positions;
+}
+
+const mapWrap = document.getElementById('mapWrap');
+const svgEl = document.getElementById('map');
+const zoomGrp = document.getElementById('zoomGroup');
+
+const zoom = d3.zoom().scaleExtent([0.15, 4]).on('zoom', e => {
+  zoomGrp.setAttribute('transform', e.transform);
+});
+
+d3.select(svgEl).call(zoom);
+svgEl.addEventListener('mousedown', () => mapWrap.classList.add('panning'));
+window.addEventListener('mouseup', () => mapWrap.classList.remove('panning'));
+window.addEventListener('blur', () => mapWrap.classList.remove('panning'));
+mapWrap.addEventListener('mouseleave', () => mapWrap.classList.remove('panning'));
+
+function fitToView(w, h) {
+  const ww = mapWrap.clientWidth || 900;
+  const wh = mapWrap.clientHeight || 640;
+  svgEl.setAttribute('viewBox', `0 0 ${ww} ${wh}`);
+  svgEl.setAttribute('height', wh);
+
+  const fitScale = Math.min(0.95, ww / w, wh / h);
+  const scale = Math.min(4, fitScale * 1.9);
+  const tx = (ww - w * scale) / 2;
+  const ty = (wh - h * scale) / 2;
+  d3.select(svgEl).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+function getVisibleIds() {
+  let base = nodes.filter(n => {
+    const hay = [n.name, n.layer, n.type, ...n.tags].join(' ').toLowerCase();
+    if (state.search && !hay.includes(state.search.toLowerCase())) return false;
+    if (state.layer !== 'All' && n.layer !== state.layer) return false;
+    switch (state.focus) {
+      case 'Software Stack':
+        return ['software-dev','db-ai-projects','db-dev-work','db-bugs','db-capture','db-decisions','db-naming','db-context','db-projects','sft-promptlab','sft-garden-os','brief-promptlab','brief-garden-os','tech-ai','home-dashboard','ia-analysis'].includes(n.id);
+      case 'Data Flow':
+        return ['Database','Governance'].includes(n.layer) || n.id === 'software-dev';
+      case 'Hubs Only':
+        return n.layer === 'Hub';
+      case 'Governance':
+        return ['db-decisions','db-naming','db-context'].includes(n.id) || n.id === 'software-dev' || n.id === 'ia-analysis';
+      default:
+        return true;
+    }
+  });
+
+  if (state.focusNode) {
+    const nbrs = adjacency[state.focusNode] || new Set();
+    const focusIds = new Set([state.focusNode, ...nbrs]);
+    base = nodes.filter(n => focusIds.has(n.id));
+  }
+
+  return new Set(base.map(n => n.id));
+}
+
+function renderLegend() {
+  document.getElementById('legend').innerHTML = Object.entries(layers).map(([name, col]) =>
+    `<span class="legend-item"><span class="dot" style="background:${col}"></span>${name}</span>`
+  ).join('');
+}
+
+function renderFocusModes() {
+  const modes = ['All','Software Stack','Data Flow','Hubs Only','Governance'];
+  const el = document.getElementById('focusModes');
+  el.innerHTML = '';
+  modes.forEach(m => {
+    const b = document.createElement('button');
+    b.textContent = m;
+    if (state.focus === m) b.classList.add('active');
+    b.onclick = () => {
+      state.focus = m;
+      state.focusNode = null;
+      layoutCache = null;
+      render();
+    };
+    el.appendChild(b);
+  });
+}
+
+function renderStats(visIds) {
+  const vis = [...visIds].map(id => nodeMap[id]);
+  document.getElementById('heroStats').innerHTML = [
+    ['Visible', vis.length],
+    ['Hubs', vis.filter(n => n.layer === 'Hub').length],
+    ['DBs', vis.filter(n => n.layer === 'Database' || n.layer === 'Governance').length],
+    ['Pages', vis.filter(n => n.layer === 'Page').length],
+  ].map(([l, v]) => `<div class="stat"><div class="stat-val">${v}</div><div class="stat-lbl">${l}</div></div>`).join('');
+}
+
+function renderMap(visIds) {
+  computeLayout(visIds);
+  const positions = layoutCache.positions;
+  const { offX, offY } = layoutCache;
+
+  const edgeGrp = document.getElementById('edgeGroup');
+  const nodeGrp = document.getElementById('nodeGroup');
+  edgeGrp.innerHTML = '';
+  nodeGrp.innerHTML = '';
+
+  const ww = mapWrap.clientWidth || 900;
+  const wh = mapWrap.clientHeight || 640;
+  svgEl.setAttribute('viewBox', `0 0 ${ww} ${wh}`);
+  svgEl.setAttribute('height', wh);
+
+  edges.forEach(({ s, t, type }) => {
+    if (!visIds.has(s) || !visIds.has(t)) return;
+    const ps = positions[s];
+    const pt = positions[t];
+    if (!ps || !pt) return;
+    const x1 = ps.x - offX + NW / 2;
+    const y1 = ps.y - offY + NH;
+    const x2 = pt.x - offX + NW / 2;
+    const y2 = pt.y - offY;
+    const my = (y1 + y2) / 2;
+    const active = state.selectedId === s || state.selectedId === t;
+    const colMap = { structure: 'rgba(120,145,190,0.35)', data: 'rgba(52,211,153,0.45)', reference: 'rgba(251,146,60,0.4)' };
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${x1} ${y1} C${x1} ${my},${x2} ${my},${x2} ${y2}`);
+    path.setAttribute('class', `edge ${type}${active ? ' active' : ''}`);
+    path.setAttribute('stroke', colMap[type]);
+    path.setAttribute('marker-end', type === 'data' ? 'url(#arr-data)' : 'url(#arr)');
+    edgeGrp.appendChild(path);
+  });
+
+  nodes.forEach(n => {
+    const vis = visIds.has(n.id);
+    const pos = positions[n.id];
+    if (!pos) return;
+    const px = pos.x - offX;
+    const py = pos.y - offY;
+    const col = layers[n.layer] || '#818cf8';
+    const deg = degree[n.id];
+    const heat = state.heatmap ? (deg / maxDegree) : 0;
+    const heatCol = heat > 0.6 ? '#ef4444' : heat > 0.35 ? '#f59e0b' : '#38bdf8';
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', `node${n.id === state.selectedId ? ' selected' : ''}${!vis ? ' dimmed' : ''}${state.heatmap ? ' heat-visible' : ''}`);
+    g.setAttribute('data-id', n.id);
+    g.setAttribute('transform', `translate(${px},${py})`);
+    g.setAttribute('tabindex', vis ? 0 : -1);
+    if (vis) {
+      g.setAttribute('role', 'button');
+      g.setAttribute('aria-label', n.name);
+    }
+
+    const selGlow = n.id === state.selectedId ? `filter:drop-shadow(0 0 14px ${col}44)` : '';
+    g.innerHTML = `
+      <circle class="heat-ring" cx="${NW/2}" cy="${NH/2}" r="${Math.max(NW,NH)*0.6}" stroke="${heatCol}"/>
+      <rect class="bg" width="${NW}" height="${NH}" rx="13" style="${n.id===state.selectedId?`stroke:${col};${selGlow}`:''}"/>
+      <rect class="n-bar" x="13" y="12" width="36" height="5" fill="${col}" opacity="0.85"/>
+      <text class="n-type" x="13" y="28" fill="${col}">${esc(n.type)}</text>
+      <text class="n-name" x="13" y="48">${esc(n.name.length>27?n.name.slice(0,26)+'…':n.name)}</text>
+      <text class="n-meta" x="13" y="64">${esc(n.layer)} · ${esc(n.status)}</text>
+      <text class="n-meta" x="13" y="78">${n.tags.slice(0,2).map(t=>'#'+t).join('  ')}</text>
+      ${state.heatmap ? `<text class="n-degree" x="${NW-12}" y="16" text-anchor="end" fill="${heatCol}">${deg}↔</text>` : ''}
+    `;
+    nodeGrp.appendChild(g);
+  });
+
+  nodeGrp.onclick = e => {
+    const g = e.target.closest('.node:not(.dimmed)');
+    if (!g) return;
+    const id = g.dataset.id;
+    if (state.selectedId === id) {
+      state.focusNode = state.focusNode === id ? null : id;
+      layoutCache = null;
+    }
+    state.selectedId = id;
+    render(false);
   };
 
-  /* ─────────────────────────────────────────
-     Node data — sourced from live workspace
-     Layout: 5 rows, x step ~280, y step ~190
-  ───────────────────────────────────────── */
-  const NW = 240, NH = 95;
+  document.getElementById('canvasTitle').textContent =
+    state.focusNode ? `Focus: ${nodeMap[state.focusNode].name}` :
+    state.focus !== 'All' ? state.focus : 'Full Topology';
+}
 
-  const nodes = [
+function renderDetail(visIds) {
+  const panel = document.getElementById('detailPanel');
+  if (!visIds.size) {
+    panel.innerHTML = `<div class="d-card"><div class="d-kicker">No results</div><p class="d-desc" style="margin-top:6px">Adjust filters to restore the map.</p></div>`;
+    return;
+  }
 
-    /* ── Row 0 — Top-level structure (y=30) ── */
-    {
-      id: 'home-dashboard',
-      name: 'HOME | Dashboard',
-      layer: 'Hub',
-      type: 'Top Hub',
-      status: 'Active',
-      x: 580, y: 30,
-      url: 'https://notion.so/f3fe2637a59d402781e3d7ca07bfbc9c',
-      desc: 'Primary entry point for the full workspace. Acts as the main dashboard and navigation hub across all life areas.',
-      children: ['tech-ai', 'work-career', 'home-family', 'home-hub'],
-      tags: ['top-level', 'dashboard', 'navigation'],
-    },
+  if (!visIds.has(state.selectedId)) state.selectedId = [...visIds][0];
+  const n = nodeMap[state.selectedId];
+  const col = layers[n.layer] || '#818cf8';
+  const inbound = edges.filter(e => e.t === n.id).map(e => nodeMap[e.s]).filter(Boolean);
+  const outbound = edges.filter(e => e.s === n.id).map(e => nodeMap[e.t]).filter(Boolean);
 
-    /* ── Row 1 — Life area hubs (y=190) ── */
-    {
-      id: 'tech-ai',
-      name: '03 | Tech & AI',
-      layer: 'Hub',
-      type: 'Area Hub',
-      status: 'Active',
-      x: 30, y: 190,
-      url: 'https://notion.so/d7ccbff1c1474efbb2d7f1d50501df4d',
-      desc: 'Top-level hub for all technology and AI work. Parent of Software Development and Notion management.',
-      children: ['software-dev', 'hub-technology'],
-      tags: ['hub', 'area', 'tech'],
-    },
-    {
-      id: 'work-career',
-      name: '02 | Work & Career HQ',
-      layer: 'Hub',
-      type: 'Area Hub',
-      status: 'Active',
-      x: 310, y: 190,
-      url: 'https://notion.so/238255fc8f44808ca62ecb57f86b3787',
-      desc: 'Hub for professional work, career development, and business projects.',
-      children: ['creative-hub'],
-      tags: ['hub', 'area', 'work'],
-    },
-    {
-      id: 'home-family',
-      name: '05 | Home & Family',
-      layer: 'Hub',
-      type: 'Area Hub',
-      status: 'Active',
-      x: 590, y: 190,
-      url: 'https://notion.so/2ab255fc8f4480708639d2973408f334',
-      desc: 'Hub for home improvement, family projects, and household management.',
-      children: ['home-hub', 'hub-home-env'],
-      tags: ['hub', 'area', 'home'],
-    },
-    {
-      id: 'hub-technology',
-      name: 'HUB | Technology',
-      layer: 'Hub',
-      type: 'Sub-Hub',
-      status: 'Active',
-      x: 870, y: 190,
-      url: 'https://notion.so/2ab255fc8f448015b092ea87c2f1b3a2',
-      desc: 'Technology-specific hub branching from Tech & AI. Houses tool and tech navigation.',
-      children: ['hub-tech-tools'],
-      tags: ['hub', 'technology'],
-    },
-    {
-      id: 'hub-home-env',
-      name: 'HUB | Home & Environment',
-      layer: 'Hub',
-      type: 'Sub-Hub',
-      status: 'Active',
-      x: 1150, y: 190,
-      url: 'https://notion.so/1f2255fc8f4480489573cb0ae367289f',
-      desc: 'Sub-hub for home environment, garden, and physical space management.',
-      children: ['hub-workshop'],
-      tags: ['hub', 'home', 'environment'],
-    },
+  const impactRows = [...nodes]
+    .sort((a, b) => degree[b.id] - degree[a.id])
+    .slice(0, 8)
+    .map(nd => `<tr><td style="color:${layers[nd.layer]||'#818cf8'}">${esc(nd.name.length>24?nd.name.slice(0,23)+'…':nd.name)}</td><td class="deg" style="color:${degree[nd.id]/maxDegree>0.6?'#ef4444':degree[nd.id]/maxDegree>0.35?'#f59e0b':'#38bdf8'}">${degree[nd.id]}</td></tr>`)
+    .join('');
 
-    /* ── Row 2 — Project hubs & key pages (y=370) ── */
-    {
-      id: 'software-dev',
-      name: 'Software Development',
-      layer: 'Hub',
-      type: 'Control Panel',
-      status: 'Active',
-      x: 30, y: 370,
-      url: 'https://notion.so/31f255fc8f44800ba24cfe8811c9b815',
-      desc: 'Main control panel hub for all software projects. Houses linked views of key databases: DB | AI Projects Tracker, DB | Software Development, DB | Bug & Issue Backlog, DB | AI Conversation Capture, DB | Technical Decisions Log.',
-      children: ['db-ai-projects', 'db-dev-work', 'db-bugs', 'db-capture', 'db-decisions', 'sft-promptlab', 'sft-garden-os'],
-      tags: ['control-panel', 'software', 'hub'],
-    },
-    {
-      id: 'creative-hub',
-      name: 'HUB | Creative Projects',
-      layer: 'Hub',
-      type: 'Sub-Hub',
-      status: 'Active',
-      x: 310, y: 370,
-      url: 'https://notion.so/1f2255fc8f4480f78f3ef9b81c90398f',
-      desc: 'Creative projects hub. Connected to DB | Creative Projects.',
-      children: ['db-creative'],
-      tags: ['hub', 'creative', 'projects'],
-    },
-    {
-      id: 'home-hub',
-      name: 'HUB | Home Life',
-      layer: 'Hub',
-      type: 'Sub-Hub',
-      status: 'Active',
-      x: 590, y: 370,
-      url: 'https://notion.so/c5aaa5b9502d4b118c9cd9f5bec48388',
-      desc: 'Home life management hub. Tracks household, family operations, and personal projects.',
-      children: ['db-projects-home'],
-      tags: ['hub', 'home', 'life'],
-    },
-    {
-      id: 'hub-tech-tools',
-      name: 'HUB | Tech & Tools Nav',
-      layer: 'Hub',
-      type: 'Sub-Hub',
-      status: 'Active',
-      x: 870, y: 370,
-      url: 'https://notion.so/2b7255fc8f4481ae807bebcf55f6d165',
-      desc: 'Navigation hub for tech tools and utilities. Reference point for software tooling decisions.',
-      children: [],
-      tags: ['hub', 'navigation', 'tools'],
-    },
-    {
-      id: 'hub-workshop',
-      name: 'HUB | Workshop & Garden',
-      layer: 'Hub',
-      type: 'Sub-Hub',
-      status: 'Active',
-      x: 1150, y: 370,
-      url: 'https://notion.so/2ff255fc8f4480beb091fe023cbfce90',
-      desc: 'Hub for workshop, garage, and garden projects. Related to Garden OS.',
-      children: ['sft-garden-os'],
-      tags: ['hub', 'workshop', 'garden'],
-    },
+  panel.innerHTML = `
+    <div class="d-card">
+      <div class="d-kicker">${esc(n.layer)} · ${esc(n.type)}</div>
+      <div class="d-title">${esc(n.name)}</div>
+      <p class="d-desc">${esc(n.desc)}</p>
+      <div class="chips">
+        <span class="chip" style="color:${col};border-color:${col}30">${esc(n.layer)}</span>
+        <span class="chip">${esc(n.status)}</span>
+      </div>
+      ${n.url ? `<a class="notion-link" href="${esc(n.url)}" target="_blank" rel="noopener">↗ Open in Notion</a>` : ''}
+      ${state.focusNode !== n.id
+        ? `<br/><a class="notion-link" style="color:var(--muted);margin-top:4px" href="#" id="focusLink">⊙ Click node again to focus tree</a>`
+        : `<br/><a class="notion-link" style="color:#ef4444;margin-top:4px" href="#" id="unfocusLink">✕ Clear focus</a>`
+      }
+    </div>
 
-    /* ── Row 3 — Databases (y=545) ── */
-    {
-      id: 'db-ai-projects',
-      name: 'DB | AI Projects Tracker',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 30, y: 545,
-      url: 'https://notion.so/78597fcad9b24222b7b8bc9aa2ff83ae',
-      desc: 'Canonical tracker for AI software products (PromptLab, Garden OS, NotionWidgets). The authoritative "product" object DB — work items, bugs, and decisions relate back to rows here.',
-      children: [],
-      tags: ['database', 'products', 'tracker'],
-    },
-    {
-      id: 'db-dev-work',
-      name: 'DB | Software Development',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 280, y: 545,
-      url: 'https://notion.so/744f9024122e433faca9ac58411a8086',
-      desc: 'Execution-layer database. All dev work items (tasks, features, fixes) across all software projects. Relates to DB | AI Projects Tracker via Product relation.',
-      children: [],
-      tags: ['database', 'execution', 'dev-work'],
-    },
-    {
-      id: 'db-bugs',
-      name: 'DB | Bug & Issue Backlog',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 530, y: 545,
-      url: 'https://notion.so/3a119da939854a7f9ce19ad3a39116a8',
-      desc: 'Quality layer. All bugs and issues across products. Relates to DB | AI Projects Tracker via Product relation. Feeds rollups on project rows.',
-      children: [],
-      tags: ['database', 'quality', 'bugs'],
-    },
-    {
-      id: 'db-capture',
-      name: 'DB | AI Conversation Capture',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 780, y: 545,
-      url: 'https://notion.so/baf784e9a1e34a7db4dde6e2ca497c97',
-      desc: 'Intake/capture layer. Stores AI conversation extracts that yield dev work items or decision records. Feeds into DB | Software Development and DB | Technical Decisions Log.',
-      children: [],
-      tags: ['database', 'capture', 'intake', 'ai'],
-    },
-    {
-      id: 'db-decisions',
-      name: 'DB | Technical Decisions Log',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 1030, y: 545,
-      url: 'https://notion.so/c9512134df8141fe8f3403536a7fdc4e',
-      desc: 'Governance layer. Records all technical decisions (ADRs). Relates to DB | AI Projects Tracker. Fed by AI Conversation Capture and Dev Work.',
-      children: [],
-      tags: ['database', 'governance', 'decisions'],
-    },
-    {
-      id: 'db-naming',
-      name: 'DB | Naming Decisions',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 1280, y: 545,
-      url: 'https://notion.so/e81391c8732f4d689a56743063a1fbb7',
-      desc: 'Governance layer. Tracks naming decisions and terminology standards across the workspace and codebase.',
-      children: [],
-      tags: ['database', 'governance', 'naming'],
-    },
+    <div class="d-card">
+      <div class="kv"><div class="k">Type</div><div class="v">${esc(n.type)}</div></div>
+      <div class="kv"><div class="k">Layer</div><div class="v">${esc(n.layer)}</div></div>
+      <div class="kv"><div class="k">Status</div><div class="v">${esc(n.status)}</div></div>
+      <div class="kv"><div class="k">Degree</div><div class="v">${degree[n.id]} connections</div></div>
+    </div>
 
-    /* ── Row 4 — Project pages & supporting DBs (y=720) ── */
-    {
-      id: 'sft-promptlab',
-      name: 'SFT | PromptLab',
-      layer: 'Page',
-      type: 'Project Brief',
-      status: 'Active',
-      x: 30, y: 720,
-      url: 'https://notion.so/31f255fc8f44807abbd8d0dd4d62cb89',
-      desc: 'Front door for the PromptLab product. Contains linked DB views filtered to Prompt Lab, key docs, architecture embed, and archive. Relates to DB | AI Projects Tracker row.',
-      children: [],
-      tags: ['project', 'promptlab', 'brief'],
-    },
-    {
-      id: 'sft-garden-os',
-      name: 'SFT | Garden OS',
-      layer: 'Page',
-      type: 'Project Brief',
-      status: 'Active',
-      x: 280, y: 720,
-      url: 'https://notion.so/148fe68675df406b86752dfe086e051a',
-      desc: 'Front door for Garden OS (raised bed planner). Linked DB views filtered to Garden OS, architecture docs, and iteration notes.',
-      children: [],
-      tags: ['project', 'garden-os', 'brief'],
-    },
-    {
-      id: 'db-context',
-      name: 'DB | Context Templates',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 530, y: 720,
-      url: 'https://notion.so/b1fdd9d38b574bf89e02bda970ae0945',
-      desc: 'Governance layer. Library of reusable AI context templates for prompting Claude and other models consistently across projects.',
-      children: [],
-      tags: ['database', 'governance', 'context', 'prompting'],
-    },
-    {
-      id: 'db-projects',
-      name: 'DB | Projects',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 780, y: 720,
-      url: 'https://notion.so/1f2255fc8f448128994df83b59539ded',
-      desc: 'General projects database covering reusable systems and subsystems (e.g. Embedded Notion Widgets). Separate from DB | AI Projects Tracker which tracks products.',
-      children: [],
-      tags: ['database', 'projects', 'systems'],
-    },
-    {
-      id: 'db-creative',
-      name: 'DB | Creative Projects',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 1030, y: 720,
-      url: 'https://notion.so/5200d1e8d4c54a0699758f8f9b53db8d',
-      desc: 'Tracks creative projects separate from software. Used within HUB | Creative Projects.',
-      children: [],
-      tags: ['database', 'creative', 'projects'],
-    },
-    {
-      id: 'db-projects-home',
-      name: 'DB | Projects (Robertsons)',
-      layer: 'Database',
-      type: 'Database',
-      status: 'Active',
-      x: 1280, y: 720,
-      url: 'https://notion.so/584a7ccebb0f41e5b046e4e6a1dc0a95',
-      desc: 'Home and family projects database used within HUB | Home Life.',
-      children: [],
-      tags: ['database', 'home', 'family', 'projects'],
-    },
-  ];
+    <div class="d-card">
+      <div class="d-kicker">Inbound (${inbound.length})</div>
+      <ul class="d-list">
+        ${inbound.length ? inbound.map(r=>`<li>${esc(r.name)} <span>(${esc(r.layer)})</span></li>`).join('') : '<li>None</li>'}
+      </ul>
+    </div>
 
-  /* ─────────────────────────────────────────
-     Explicit edges (source → target)
-  ───────────────────────────────────────── */
-  const edges = [
-    // HOME → area hubs
-    ['home-dashboard', 'tech-ai'],
-    ['home-dashboard', 'work-career'],
-    ['home-dashboard', 'home-family'],
+    <div class="d-card">
+      <div class="d-kicker">Outbound (${outbound.length})</div>
+      <ul class="d-list">
+        ${outbound.length ? outbound.map(r=>`<li>${esc(r.name)} <span>(${esc(r.layer)})</span></li>`).join('') : '<li>None</li>'}
+      </ul>
+    </div>
 
-    // Area hubs → sub-hubs
-    ['tech-ai', 'software-dev'],
-    ['tech-ai', 'hub-technology'],
-    ['work-career', 'creative-hub'],
-    ['home-family', 'home-hub'],
-    ['home-family', 'hub-home-env'],
-    ['hub-technology', 'hub-tech-tools'],
-    ['hub-home-env', 'hub-workshop'],
+    <div class="d-card">
+      <div class="d-kicker">Tags</div>
+      <div class="chips" style="margin-top:6px">
+        ${n.tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}
+      </div>
+    </div>
 
-    // Software Dev control panel → databases
-    ['software-dev', 'db-ai-projects'],
-    ['software-dev', 'db-dev-work'],
-    ['software-dev', 'db-bugs'],
-    ['software-dev', 'db-capture'],
-    ['software-dev', 'db-decisions'],
+    <div class="d-card">
+      <div class="d-kicker">🌡 Impact — top nodes by connections</div>
+      <table class="impact-table">
+        <thead><tr><th>Node</th><th style="text-align:right">Edges</th></tr></thead>
+        <tbody>${impactRows}</tbody>
+      </table>
+    </div>
+  `;
 
-    // Software Dev → project brief pages
-    ['software-dev', 'sft-promptlab'],
-    ['software-dev', 'sft-garden-os'],
+  document.getElementById('focusLink')?.addEventListener('click', e => {
+    e.preventDefault();
+    state.focusNode = n.id;
+    layoutCache = null;
+    render(false);
+  });
+  document.getElementById('unfocusLink')?.addEventListener('click', e => {
+    e.preventDefault();
+    state.focusNode = null;
+    layoutCache = null;
+    render(true);
+  });
+}
 
-    // Data flow: Capture → Dev Work & Decisions
-    ['db-capture', 'db-dev-work'],
-    ['db-capture', 'db-decisions'],
+function render(refit = true) {
+  renderFocusModes();
+  const visIds = getVisibleIds();
+  renderStats(visIds);
+  renderMap(visIds);
+  renderDetail(visIds);
+  if (refit && layoutCache) {
+    fitToView(layoutCache.w, layoutCache.h);
+  }
+}
 
-    // Dev Work & Bugs → AI Projects (relation)
-    ['db-dev-work', 'db-ai-projects'],
-    ['db-bugs', 'db-ai-projects'],
-    ['db-decisions', 'db-ai-projects'],
+function esc(str) {
+  const el = document.createElement('span');
+  el.textContent = String(str ?? '');
+  return el.innerHTML;
+}
 
-    // Naming feeds Decisions
-    ['db-naming', 'db-decisions'],
+function populateSelect(id, values) {
+  const el = document.getElementById(id);
+  el.innerHTML = ['All', ...new Set(values)].map(v => `<option value="${v}">${v}</option>`).join('');
+}
 
-    // Context Templates → Capture / Software Dev
-    ['db-context', 'db-capture'],
-    ['db-context', 'software-dev'],
+populateSelect('layerF', nodes.map(n => n.layer));
+renderLegend();
 
-    // Garden hub → Garden OS brief
-    ['hub-workshop', 'sft-garden-os'],
+let st;
+document.getElementById('search').addEventListener('input', e => {
+  clearTimeout(st);
+  st = setTimeout(() => {
+    state.search = e.target.value.trim();
+    state.focusNode = null;
+    layoutCache = null;
+    render();
+  }, 130);
+});
 
-    // Creative hub → creative DB
-    ['creative-hub', 'db-creative'],
+document.getElementById('layerF').addEventListener('change', e => {
+  state.layer = e.target.value;
+  state.focusNode = null;
+  layoutCache = null;
+  render();
+});
 
-    // Home hub → home projects DB
-    ['home-hub', 'db-projects-home'],
+document.getElementById('heatBtn').addEventListener('click', () => {
+  state.heatmap = !state.heatmap;
+  document.getElementById('heatBtn').textContent = state.heatmap ? '🌡 Heatmap ON' : '🌡 Heatmap';
+  render(false);
+});
 
-    // Projects DB ties to Software Dev as subsystem registry
-    ['software-dev', 'db-projects'],
-  ];
+document.getElementById('fitBtn').addEventListener('click', () => {
+  if (layoutCache) fitToView(layoutCache.w, layoutCache.h);
+});
 
-  /* ─────────────────────────────────────────
-     State
-  ───────────────────────────────────────── */
-  const state = {
+document.getElementById('resetBtn').addEventListener('click', () => {
+  clearTimeout(st);
+  Object.assign(state, {
     search: '',
     layer: 'All',
-    type: 'All',
     focus: 'All',
     selectedId: 'home-dashboard',
-  };
-
-  /* ─────────────────────────────────────────
-     Helpers
-  ───────────────────────────────────────── */
-  const $ = id => document.getElementById(id);
-  const esc = str => { const el = document.createElement('span'); el.textContent = str; return el.innerHTML; };
-  const unique = arr => ['All', ...new Set(arr)];
-
-  function populateSelect(el, values) {
-    el.innerHTML = '';
-    for (const v of values) {
-      const o = document.createElement('option');
-      o.value = o.textContent = v;
-      el.appendChild(o);
-    }
-  }
-
-  /* ─────────────────────────────────────────
-     Filter
-  ───────────────────────────────────────── */
-  function filteredNodes() {
-    return nodes.filter(n => {
-      const hay = [n.name, n.layer, n.type, ...n.tags].join(' ').toLowerCase();
-      if (state.search && !hay.includes(state.search.toLowerCase())) return false;
-      if (state.layer !== 'All' && n.layer !== state.layer) return false;
-      if (state.type !== 'All' && n.type !== state.type) return false;
-
-      switch (state.focus) {
-        case 'Software Stack': return ['Hub','Database','Page'].includes(n.layer) &&
-          ['software-dev','db-ai-projects','db-dev-work','db-bugs','db-capture','db-decisions','db-naming','db-context','db-projects','sft-promptlab','sft-garden-os','tech-ai','hub-technology','hub-tech-tools','home-dashboard'].includes(n.id);
-        case 'Data Flow':  return ['Database'].includes(n.layer) || n.id === 'software-dev';
-        case 'Hubs Only':  return n.layer === 'Hub';
-        case 'Governance': return n.type === 'Database' && ['db-decisions','db-naming','db-context'].includes(n.id) || n.id === 'software-dev';
-        default:           return true;
-      }
-    });
-  }
-
-  /* ─────────────────────────────────────────
-     Render: Hero stats
-  ───────────────────────────────────────── */
-  function renderStats(vis) {
-    const defs = [
-      ['Visible', vis.length],
-      ['Hubs',    vis.filter(n => n.layer === 'Hub').length],
-      ['DBs',     vis.filter(n => n.layer === 'Database').length],
-      ['Pages',   vis.filter(n => n.layer === 'Page').length],
-    ];
-    $('heroStats').innerHTML = defs.map(([l, v]) => `
-      <div class="stat">
-        <div class="stat-val">${v}</div>
-        <div class="stat-lbl">${l}</div>
-      </div>`).join('');
-  }
-
-  /* ─────────────────────────────────────────
-     Render: Legend
-  ───────────────────────────────────────── */
-  function renderLegend() {
-    $('legend').innerHTML = Object.entries(layers).map(([name, color]) =>
-      `<span class="legend-item"><span class="dot" style="background:${color}"></span>${name}</span>`
-    ).join('');
-  }
-
-  /* ─────────────────────────────────────────
-     Render: Focus modes
-  ───────────────────────────────────────── */
-  function renderFocusModes() {
-    const modes = ['All', 'Software Stack', 'Data Flow', 'Hubs Only', 'Governance'];
-    $('focusModes').innerHTML = '';
-    for (const m of modes) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = m;
-      if (state.focus === m) b.classList.add('active');
-      b.addEventListener('click', () => { state.focus = m; render(); });
-      $('focusModes').appendChild(b);
-    }
-  }
-
-  /* ─────────────────────────────────────────
-     Render: SVG map
-  ───────────────────────────────────────── */
-  function renderMap(vis) {
-    const visIds = new Set(vis.map(n => n.id));
-    const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
-    const frag = [];
-
-    // Grid defs
-    frag.push(`
-      <defs>
-        <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
-          <path d="M 28 0 L 0 0 0 28" fill="none" stroke="rgba(255,255,255,0.025)" stroke-width="1"/>
-        </pattern>
-      </defs>
-      <rect width="1440" height="860" class="grid-bg"/>
-    `);
-
-    // Row labels
-    const rowLabels = [
-      { y: 18,  label: 'WORKSPACE ENTRY' },
-      { y: 178, label: 'AREA HUBS' },
-      { y: 358, label: 'CONTROL PANELS & PROJECT HUBS' },
-      { y: 533, label: 'DATABASES' },
-      { y: 708, label: 'PROJECT BRIEFS & SUPPORTING DBs' },
-    ];
-    for (const {y, label} of rowLabels) {
-      frag.push(`<text x="18" y="${y}" fill="rgba(120,144,184,0.3)" font-size="9" font-weight="700" letter-spacing="0.1em" font-family="DM Mono, monospace">${esc(label)}</text>`);
-    }
-
-    // Edges
-    for (const [a, b] of edges) {
-      const na = byId[a], nb = byId[b];
-      if (!na || !nb) continue;
-      const show = visIds.has(a) && visIds.has(b);
-      const hi = show && (a === state.selectedId || b === state.selectedId);
-      const x1 = na.x + NW / 2, y1 = na.y + NH;
-      const x2 = nb.x + NW / 2, y2 = nb.y;
-      const my = (y1 + y2) / 2;
-      frag.push(`<path class="edge${hi ? ' highlight' : ''}" d="M${x1} ${y1} C${x1} ${my},${x2} ${my},${x2} ${y2}" style="opacity:${show ? (hi ? 1 : 0.5) : 0.04}"/>`);
-    }
-
-    // Nodes
-    for (const n of nodes) {
-      const vis = visIds.has(n.id);
-      const col = layers[n.layer] || '#818cf8';
-      const sel = n.id === state.selectedId;
-      frag.push(`
-        <g class="node${sel ? ' selected' : ''}${!vis ? ' dimmed' : ''}"
-           data-id="${esc(n.id)}"
-           data-interactive="${vis}"
-           transform="translate(${n.x},${n.y})"
-           tabindex="${vis ? 0 : -1}"
-           ${vis ? `role="button" aria-label="${esc(n.name)}"` : 'aria-hidden="true"'}>
-          <rect class="bg" width="${NW}" height="${NH}" rx="14"/>
-          <rect x="14" y="13" width="40" height="6" rx="999" fill="${col}" opacity="0.85"/>
-          <text class="n-type" x="14" y="31" fill="${col}">${esc(n.type)}</text>
-          <text class="n-title" x="14" y="52">${esc(n.name.length > 26 ? n.name.slice(0, 25) + '…' : n.name)}</text>
-          <text class="n-sub" x="14" y="70">${esc(n.layer)} · ${esc(n.status)}</text>
-          <text class="n-sub" x="14" y="84">${n.tags.slice(0,2).map(t => '#'+t).join(' ')}</text>
-        </g>
-      `);
-    }
-
-    $('map').innerHTML = frag.join('');
-    $('canvasTitle').textContent = vis.length
-      ? (state.focus === 'All' ? 'Full Topology' : state.focus)
-      : 'No matching nodes';
-  }
-
-  /* ─────────────────────────────────────────
-     Render: Detail panel
-  ───────────────────────────────────────── */
-  function renderDetail(vis) {
-    if (!vis.length) {
-      $('detailPanel').innerHTML = `<div class="d-card"><div class="d-kicker">No results</div><p class="d-desc" style="margin-top:8px">Adjust filters to restore the map.</p></div>`;
-      return;
-    }
-
-    const n = vis.find(x => x.id === state.selectedId) || vis[0];
-    state.selectedId = n.id;
-
-    const col = layers[n.layer] || '#818cf8';
-
-    const related = edges
-      .filter(([a, b]) => a === n.id || b === n.id)
-      .map(([a, b]) => a === n.id ? b : a)
-      .map(id => nodes.find(x => x.id === id))
-      .filter(Boolean);
-
-    $('detailPanel').innerHTML = `
-      <div class="d-card">
-        <div class="d-kicker">${esc(n.layer)} · ${esc(n.type)}</div>
-        <div class="d-title">${esc(n.name)}</div>
-        <p class="d-desc">${esc(n.desc)}</p>
-        <div class="chips">
-          <span class="chip" style="color:${col};border-color:${col}30">${esc(n.layer)}</span>
-          <span class="chip">${esc(n.status)}</span>
-        </div>
-        ${n.url ? `<a class="notion-link" href="${esc(n.url)}" target="_blank" rel="noopener">↗ Open in Notion</a>` : ''}
-      </div>
-
-      <div class="d-card">
-        <div class="kv"><div class="k">Type</div><div class="v">${esc(n.type)}</div></div>
-        <div class="kv"><div class="k">Layer</div><div class="v">${esc(n.layer)}</div></div>
-        <div class="kv"><div class="k">Status</div><div class="v">${esc(n.status)}</div></div>
-        <div class="kv"><div class="k">Tags</div><div class="v">${n.tags.join(', ')}</div></div>
-      </div>
-
-      <div class="d-card">
-        <div class="d-kicker">Connected (${related.length})</div>
-        <ul class="d-list" style="margin-top:6px">
-          ${related.length
-            ? related.map(r => `<li>${esc(r.name)} <span style="color:#4b607a">(${esc(r.layer)})</span></li>`).join('')
-            : '<li>No connections</li>'}
-        </ul>
-      </div>
-
-      <div class="d-card">
-        <div class="d-kicker">Tags</div>
-        <div class="chips" style="margin-top:6px">
-          ${n.tags.map(t => `<span class="chip">#${esc(t)}</span>`).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  /* ─────────────────────────────────────────
-     Main render
-  ───────────────────────────────────────── */
-  function render() {
-    renderFocusModes();
-    const vis = filteredNodes();
-    const visIds = new Set(vis.map(n => n.id));
-    if (!visIds.has(state.selectedId)) state.selectedId = vis[0]?.id ?? null;
-    renderStats(vis);
-    renderMap(vis);
-    renderDetail(vis);
-  }
-
-  /* ─────────────────────────────────────────
-     Init
-  ───────────────────────────────────────── */
-  populateSelect($('layerFilter'), unique(nodes.map(n => n.layer)));
-  populateSelect($('typeFilter'), unique(nodes.map(n => n.type)));
-  renderLegend();
-
-  $('map').addEventListener('click', e => {
-    const g = e.target.closest('.node[data-interactive="true"]');
-    if (!g) return;
-    state.selectedId = g.dataset.id;
-    render();
+    focusNode: null,
+    heatmap: false,
   });
-
-  $('map').addEventListener('keydown', e => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const g = e.target.closest('.node[data-interactive="true"]');
-    if (!g) return;
-    e.preventDefault();
-    state.selectedId = g.dataset.id;
-    render();
-  });
-
-  let t;
-  $('search').addEventListener('input', e => {
-    clearTimeout(t);
-    t = setTimeout(() => { state.search = e.target.value.trim(); render(); }, 120);
-  });
-
-  $('layerFilter').addEventListener('change', e => { state.layer = e.target.value; render(); });
-  $('typeFilter').addEventListener('change', e => { state.type = e.target.value; render(); });
-
-  $('resetBtn').addEventListener('click', () => {
-    clearTimeout(t);
-    Object.assign(state, { search: '', layer: 'All', type: 'All', focus: 'All', selectedId: 'home-dashboard' });
-    $('search').value = '';
-    $('layerFilter').value = 'All';
-    $('typeFilter').value = 'All';
-    render();
-  });
-
+  document.getElementById('search').value = '';
+  document.getElementById('layerF').value = 'All';
+  document.getElementById('heatBtn').textContent = '🌡 Heatmap';
+  layoutCache = null;
   render();
-  </script>
+});
+
+document.getElementById('nodeGroup').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const g = e.target.closest('g[data-id]');
+  if (!g) return;
+  e.preventDefault();
+  state.selectedId = g.dataset.id;
+  render(false);
+});
+
+setTimeout(() => render(), 50);
+</script>
 </body>
 </html>
