@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "meta": {
+    "id": "software-architecture",
+    "name": "DaveHomeAssist Software Architecture",
+    "version": "1.0",
+    "description": "Service-level architecture map of active software projects, shared infrastructure, and deployment targets.",
+    "author": "Dave Robertson"
+  },
+  "nodes": [
+    { "id": "github-pages", "label": "GitHub Pages", "type": "Platform", "layer": "Infrastructure", "status": "Active", "meta": { "desc": "Static hosting for all public-facing tools. Zero-backend deployment target.", "tags": ["hosting", "static", "deploy"] } },
+    { "id": "github-repos", "label": "GitHub Repos", "type": "Platform", "layer": "Infrastructure", "status": "Active", "meta": { "desc": "Source control and CI/CD via GitHub Actions. All repos under DaveHomeAssist org.", "tags": ["git", "ci-cd", "source"] } },
+    { "id": "notion-api", "label": "Notion API", "type": "External Service", "layer": "Infrastructure", "status": "Active", "meta": { "desc": "Read/write access to Notion workspace. Used for widget data and registry sync.", "tags": ["api", "notion", "integration"] } },
+    { "id": "prompt-lab", "label": "Prompt Lab", "type": "Web App", "layer": "Application", "status": "Active", "meta": { "desc": "Prompt engineering workbench. Enhancement engine, library, multi-provider support. React + Vite.", "tags": ["react", "vite", "prompts", "ai"], "risks": ["Enhancement engine can leak structured JSON into output", "Provider abstraction adds complexity"], "nextMoves": ["Complete Track A engine audit", "Add provider option sync to GitHub Pages"] } },
+    { "id": "garden-os", "label": "Garden OS", "type": "Web App", "layer": "Application", "status": "Active", "meta": { "desc": "Raised bed garden planner. Zone-aware layout engine, planting calendar, companion matrix.", "tags": ["garden", "planner", "vanilla-js"], "nextMoves": ["Deploy planting calendar module", "Add zone 6b presets"] } },
+    { "id": "notion-widgets", "label": "NotionWidgets", "type": "Widget Suite", "layer": "Application", "status": "Active", "meta": { "desc": "Self-contained HTML widgets for Notion embeds. Project Status, Quest Log, Client Approval, Workspace Map.", "tags": ["widgets", "notion", "html"], "risks": ["Workspace map breaks widget contract (uses CDN dependencies)"] } },
+    { "id": "graph-engine", "label": "Graph Explorer Engine", "type": "Library", "layer": "Application", "status": "In Development", "meta": { "desc": "Reusable graph visualization engine. D3 + Dagre. Dataset-driven rendering with map packs.", "tags": ["d3", "dagre", "visualization", "engine"] } },
+    { "id": "sdlc-map", "label": "SDLC Tool Stack Map", "type": "Web App", "layer": "Application", "status": "Active", "meta": { "desc": "Interactive visualization of the software development lifecycle tool stack.", "tags": ["sdlc", "tools", "visualization"] } },
+    { "id": "claude-api", "label": "Claude API", "type": "External Service", "layer": "AI Services", "status": "Active", "meta": { "desc": "Anthropic Claude models. Primary AI backend for Prompt Lab and development workflows.", "tags": ["ai", "anthropic", "claude", "api"] } },
+    { "id": "openai-api", "label": "OpenAI API", "type": "External Service", "layer": "AI Services", "status": "Active", "meta": { "desc": "GPT-4/o models. Secondary provider in Prompt Lab multi-provider system.", "tags": ["ai", "openai", "gpt", "api"] } },
+    { "id": "gemini-api", "label": "Gemini API", "type": "External Service", "layer": "AI Services", "status": "Active", "meta": { "desc": "Google Gemini models. Third provider option in Prompt Lab.", "tags": ["ai", "google", "gemini", "api"] } },
+    { "id": "d3-dagre", "label": "D3 + Dagre", "type": "Library", "layer": "Shared Libraries", "status": "Active", "meta": { "desc": "Graph rendering (D3.js) and auto-layout (Dagre). Used by Graph Engine and Workspace Map.", "tags": ["d3", "dagre", "layout", "svg"] } },
+    { "id": "react-vite", "label": "React + Vite", "type": "Framework", "layer": "Shared Libraries", "status": "Active", "meta": { "desc": "Frontend framework and build tool. Used by Prompt Lab.", "tags": ["react", "vite", "framework"] } },
+    { "id": "tailwind", "label": "Tailwind CSS", "type": "Library", "layer": "Shared Libraries", "status": "Active", "meta": { "desc": "Utility-first CSS framework. Used by Prompt Lab.", "tags": ["css", "tailwind", "styling"] } },
+    { "id": "notion-registry", "label": "Notion Project Registry", "type": "Database", "layer": "Infrastructure", "status": "Active", "meta": { "desc": "Master registry in Notion tracking all repos, hosted URLs, and project metadata. Synced via script.", "tags": ["registry", "notion", "sync"] } }
+  ],
+  "edges": [
+    { "from": "prompt-lab", "to": "github-pages", "type": "deploys" },
+    { "from": "prompt-lab", "to": "github-repos", "type": "source" },
+    { "from": "prompt-lab", "to": "claude-api", "type": "calls" },
+    { "from": "prompt-lab", "to": "openai-api", "type": "calls" },
+    { "from": "prompt-lab", "to": "gemini-api", "type": "calls" },
+    { "from": "prompt-lab", "to": "react-vite", "type": "depends_on" },
+    { "from": "prompt-lab", "to": "tailwind", "type": "depends_on" },
+    { "from": "garden-os", "to": "github-pages", "type": "deploys" },
+    { "from": "garden-os", "to": "github-repos", "type": "source" },
+    { "from": "notion-widgets", "to": "github-pages", "type": "deploys" },
+    { "from": "notion-widgets", "to": "github-repos", "type": "source" },
+    { "from": "notion-widgets", "to": "notion-api", "type": "reads" },
+    { "from": "graph-engine", "to": "d3-dagre", "type": "depends_on" },
+    { "from": "graph-engine", "to": "notion-widgets", "type": "embedded_in" },
+    { "from": "sdlc-map", "to": "github-pages", "type": "deploys" },
+    { "from": "sdlc-map", "to": "github-repos", "type": "source" },
+    { "from": "notion-registry", "to": "notion-api", "type": "reads" },
+    { "from": "notion-registry", "to": "github-repos", "type": "references" },
+    { "from": "github-repos", "to": "github-pages", "type": "deploys" }
+  ]
+}

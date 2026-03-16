@@ -1,0 +1,57 @@
+{
+  "title": "Software Architecture",
+  "eyebrow": "DaveHomeAssist · Architecture Map v1.0",
+  "description": "Service-level view of active projects, shared libraries, AI providers, and deployment infrastructure.",
+  "layers": {
+    "Application":      "#818cf8",
+    "Infrastructure":   "#38bdf8",
+    "AI Services":      "#34d399",
+    "Shared Libraries": "#f59e0b"
+  },
+  "edgeStyles": {
+    "deploys":     { "stroke": "rgba(56,189,248,0.4)",  "dasharray": null },
+    "source":      { "stroke": "rgba(120,145,190,0.3)", "dasharray": null },
+    "calls":       { "stroke": "rgba(52,211,153,0.45)", "dasharray": "5,3" },
+    "reads":       { "stroke": "rgba(52,211,153,0.35)", "dasharray": "5,3" },
+    "depends_on":  { "stroke": "rgba(245,158,11,0.4)",  "dasharray": "3,3" },
+    "references":  { "stroke": "rgba(251,146,60,0.3)",  "dasharray": "2,4" },
+    "embedded_in": { "stroke": "rgba(129,140,248,0.35)","dasharray": "4,2" }
+  },
+  "inspector": {
+    "fields": [
+      { "key": "type",   "label": "Type" },
+      { "key": "layer",  "label": "Layer" },
+      { "key": "status", "label": "Status" }
+    ],
+    "metaArrays": [
+      { "key": "risks",     "label": "Risks",      "emptyText": "No risks identified." },
+      { "key": "nextMoves", "label": "Next Moves",  "emptyText": "No next moves planned." }
+    ],
+    "metaChips": ["tags"],
+    "metaLink":  null
+  },
+  "focusModes": [
+    { "id": "All", "label": "All" },
+    {
+      "id": "Applications",
+      "label": "Applications",
+      "filter": { "layers": ["Application"] }
+    },
+    {
+      "id": "AI Stack",
+      "label": "AI Stack",
+      "filter": { "ids": ["prompt-lab", "claude-api", "openai-api", "gemini-api"] }
+    },
+    {
+      "id": "Deploy Chain",
+      "label": "Deploy Chain",
+      "filter": { "ids": ["github-repos", "github-pages", "prompt-lab", "garden-os", "notion-widgets", "sdlc-map"] }
+    }
+  ],
+  "stats": [
+    { "label": "Visible", "count": "visible" },
+    { "label": "Apps",    "filter": { "layer": "Application" } },
+    { "label": "Infra",   "filter": { "layer": "Infrastructure" } },
+    { "label": "AI",      "filter": { "layer": "AI Services" } }
+  ]
+}

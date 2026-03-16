@@ -1,0 +1,67 @@
+{
+  "title": "AI System Pipeline",
+  "eyebrow": "Prompt Lab · System Pipeline v1.0",
+  "description": "End-to-end view of prompt routing, enhancement, evaluation, and output normalization.",
+  "defaults": {
+    "showHeatmap": false,
+    "initialFocusMode": "All",
+    "initialLayer": "All"
+  },
+  "layers": {
+    "Frontend":      "#818cf8",
+    "Orchestration": "#38bdf8",
+    "Providers":     "#34d399",
+    "Data":          "#f59e0b",
+    "Evaluation":    "#a78bfa"
+  },
+  "edgeStyles": {
+    "calls":       { "stroke": "rgba(56,189,248,0.45)",  "dasharray": null },
+    "reads":       { "stroke": "rgba(245,158,11,0.4)",   "dasharray": "5,3" },
+    "writes":      { "stroke": "rgba(52,211,153,0.45)",  "dasharray": "5,3" },
+    "feeds":       { "stroke": "rgba(129,140,248,0.4)",  "dasharray": null },
+    "depends_on":  { "stroke": "rgba(245,158,11,0.35)",  "dasharray": "3,3" },
+    "references":  { "stroke": "rgba(251,146,60,0.3)",   "dasharray": "2,4" }
+  },
+  "inspector": {
+    "fields": [
+      { "key": "type",   "label": "Type" },
+      { "key": "layer",  "label": "Layer" },
+      { "key": "status", "label": "Status" }
+    ],
+    "metaArrays": [
+      { "key": "risks",     "label": "Risks",      "emptyText": "No risks identified." },
+      { "key": "nextMoves", "label": "Next Moves",  "emptyText": "No next moves planned." }
+    ],
+    "metaChips": ["tags"],
+    "metaLink": null
+  },
+  "focusModes": [
+    { "id": "All", "label": "All" },
+    {
+      "id": "Enhancement Flow",
+      "label": "Enhancement Flow",
+      "filter": { "ids": ["ui-client", "prompt-router", "enhancement-engine", "mode-policy", "claude-api", "openai-api", "gemini-api", "response-parser", "normalizer"] }
+    },
+    {
+      "id": "Providers",
+      "label": "Providers",
+      "filter": { "ids": ["enhancement-engine", "claude-api", "openai-api", "gemini-api", "provider-config", "prompt-router"] }
+    },
+    {
+      "id": "Data Layer",
+      "label": "Data Layer",
+      "filter": { "layers": ["Data"], "ids": ["ui-client", "normalizer"] }
+    },
+    {
+      "id": "Evaluation",
+      "label": "Evaluation",
+      "filter": { "layers": ["Evaluation"], "ids": ["enhancement-engine", "normalizer"] }
+    }
+  ],
+  "stats": [
+    { "label": "Visible",  "count": "visible" },
+    { "label": "Services", "filter": { "layers": ["Orchestration", "Frontend"] } },
+    { "label": "Providers","filter": { "layer": "Providers" } },
+    { "label": "Data",     "filter": { "layers": ["Data", "Evaluation"] } }
+  ]
+}

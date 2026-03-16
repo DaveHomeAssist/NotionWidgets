@@ -1,0 +1,58 @@
+{
+  "title": "Workspace Topology",
+  "eyebrow": "Dave's Notion Workspace · System Map v2.3",
+  "description": "Auto-layout graph of your actual Notion structure. Pan & zoom the canvas. Click any node to inspect, or click again to focus its dependency tree.",
+  "layers": {
+    "Hub":        "#818cf8",
+    "Database":   "#38bdf8",
+    "Page":       "#a78bfa",
+    "Governance": "#facc15"
+  },
+  "edgeStyles": {
+    "structure": { "stroke": "rgba(120,145,190,0.35)", "dasharray": null },
+    "data":      { "stroke": "rgba(52,211,153,0.45)", "dasharray": "5,3" },
+    "reference": { "stroke": "rgba(251,146,60,0.4)",  "dasharray": "2,4" }
+  },
+  "inspector": {
+    "fields": [
+      { "key": "type",   "label": "Type" },
+      { "key": "layer",  "label": "Layer" },
+      { "key": "status", "label": "Status" }
+    ],
+    "metaArrays": [
+      { "key": "risks",     "label": "Risks",      "emptyText": "No risks logged." },
+      { "key": "nextMoves", "label": "Next Moves",  "emptyText": "No next moves logged." }
+    ],
+    "metaChips": ["tags"],
+    "metaLink":  { "key": "url", "label": "Open in Notion", "icon": "↗" }
+  },
+  "focusModes": [
+    { "id": "All", "label": "All" },
+    {
+      "id": "Software Stack",
+      "label": "Software Stack",
+      "filter": { "ids": ["software-dev","db-ai-projects","db-dev-work","db-bugs","db-capture","db-decisions","db-naming","db-context","db-projects","sft-promptlab","sft-garden-os","brief-promptlab","brief-garden-os","tech-ai","home-dashboard","ia-analysis"] }
+    },
+    {
+      "id": "Data Flow",
+      "label": "Data Flow",
+      "filter": { "layers": ["Database","Governance"], "ids": ["software-dev"] }
+    },
+    {
+      "id": "Hubs Only",
+      "label": "Hubs Only",
+      "filter": { "layers": ["Hub"] }
+    },
+    {
+      "id": "Governance",
+      "label": "Governance",
+      "filter": { "ids": ["db-decisions","db-naming","db-context","software-dev","ia-analysis"] }
+    }
+  ],
+  "stats": [
+    { "label": "Visible", "count": "visible" },
+    { "label": "Hubs",    "filter": { "layer": "Hub" } },
+    { "label": "DBs",     "filter": { "layers": ["Database", "Governance"] } },
+    { "label": "Pages",   "filter": { "layer": "Page" } }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "meta": {
+    "id": "ai-system",
+    "name": "AI System Pipeline",
+    "version": "1.0",
+    "description": "End-to-end prompt routing, evaluation, and response pipeline for Prompt Lab and related AI tooling.",
+    "author": "Dave Robertson"
+  },
+  "nodes": [
+    { "id": "ui-client", "label": "UI Client", "type": "service", "layer": "Frontend", "status": "Active", "meta": { "desc": "React-based Prompt Lab interface. Captures user input, displays enhanced prompts, variants, and evaluation results.", "tags": ["react", "vite", "ui"] } },
+    { "id": "prompt-router", "label": "Prompt Router", "type": "service", "layer": "Orchestration", "status": "Active", "meta": { "desc": "Central dispatch. Routes enhancement requests to the correct provider based on user selection and mode.", "tags": ["routing", "dispatch", "core"], "risks": ["Single point of failure for all enhancement requests", "Provider fallback logic not yet implemented"], "nextMoves": ["Add provider health check before dispatch", "Implement fallback chain: primary → secondary → error"] } },
+    { "id": "template-library", "label": "Prompt Template Library", "type": "database", "layer": "Data", "status": "Active", "meta": { "desc": "localStorage-backed library of saved prompts, variants, notes, and tags. Supports collections and search.", "tags": ["storage", "library", "prompts"] } },
+    { "id": "enhancement-engine", "label": "Enhancement Engine", "type": "service", "layer": "Orchestration", "status": "Active", "meta": { "desc": "Core prompt improvement logic. Applies mode-specific system prompts (Balanced, Claude, ChatGPT, Image, Code, Concise, Detailed) with INTENT_POLICY guardrails.", "tags": ["enhancement", "modes", "core"], "risks": ["Balanced mode can over-assume medium/audience/tone", "Structured intermediate objects can leak into output"], "nextMoves": ["Complete Track A engine audit", "Tighten INTENT_POLICY for edge cases"] } },
+    { "id": "claude-api", "label": "Claude API", "type": "external", "layer": "Providers", "status": "Active", "meta": { "desc": "Anthropic Claude models. Primary enhancement provider. Supports XML-structured prompts natively.", "tags": ["anthropic", "claude", "api"] } },
+    { "id": "openai-api", "label": "OpenAI API", "type": "external", "layer": "Providers", "status": "Active", "meta": { "desc": "GPT-4/o models. Secondary provider. System/user message structure, chain-of-thought prompting.", "tags": ["openai", "gpt", "api"] } },
+    { "id": "gemini-api", "label": "Gemini API", "type": "external", "layer": "Providers", "status": "Active", "meta": { "desc": "Google Gemini models. Third provider option. Can produce structured JSON output but sometimes over-structures.", "tags": ["google", "gemini", "api"], "risks": ["More likely to return nested objects in enhanced field"] } },
+    { "id": "response-parser", "label": "Response Parser", "type": "service", "layer": "Orchestration", "status": "Active", "meta": { "desc": "Parses raw provider response into structured enhancement object. Handles JSON extraction, markdown stripping, and fallback parsing.", "tags": ["parsing", "json", "normalization"], "risks": ["Some providers wrap JSON in markdown code fences", "Partial JSON responses cause silent failures"], "nextMoves": ["Add streaming JSON accumulator", "Improve partial response recovery"] } },
+    { "id": "normalizer", "label": "Output Normalizer", "type": "service", "layer": "Orchestration", "status": "Active", "meta": { "desc": "coercePromptText + normalizeParsedPayload. Ensures enhanced output is always plain text strings, not structured objects or JSON strings.", "tags": ["normalization", "coercion", "safety"], "nextMoves": ["Add assumption audit for Track A"] } },
+    { "id": "eval-runner", "label": "Eval Runner", "type": "service", "layer": "Evaluation", "status": "Planned", "meta": { "desc": "Planned evaluation engine. Will score enhanced prompts against original intent, check for assumption injection, and flag over-steering.", "tags": ["evaluation", "scoring", "quality"] } },
+    { "id": "golden-dataset", "label": "Golden Dataset", "type": "artifact", "layer": "Evaluation", "status": "Planned", "meta": { "desc": "Curated set of seed prompts with expected enhancement outcomes. Used to regression-test the enhancement engine across modes.", "tags": ["testing", "regression", "dataset"] } },
+    { "id": "prompt-history", "label": "Prompt History Store", "type": "database", "layer": "Data", "status": "Active", "meta": { "desc": "localStorage record of enhancement runs. Stores original, enhanced, variants, notes, assumptions, and provider metadata per run.", "tags": ["history", "storage", "audit-trail"] } },
+    { "id": "output-formatter", "label": "Output Formatter", "type": "service", "layer": "Frontend", "status": "Active", "meta": { "desc": "Renders enhanced prompts, variants, diff views, assumption badges, and copy-to-clipboard in the UI.", "tags": ["rendering", "diff", "ui"] } },
+    { "id": "provider-config", "label": "Provider Config", "type": "artifact", "layer": "Data", "status": "Active", "meta": { "desc": "API keys, model selections, and provider-specific settings stored in localStorage. Synced to GitHub Pages provider options page.", "tags": ["config", "keys", "providers"] } },
+    { "id": "mode-policy", "label": "Mode Policy (INTENT_POLICY)", "type": "decision", "layer": "Orchestration", "status": "Active", "meta": { "desc": "Shared policy string prepended to all mode system prompts. Guards against medium/audience/tone invention. Defined in constants.js.", "tags": ["policy", "guardrails", "constants"] } }
+  ],
+  "edges": [
+    { "from": "ui-client", "to": "prompt-router", "type": "calls" },
+    { "from": "ui-client", "to": "template-library", "type": "reads" },
+    { "from": "ui-client", "to": "output-formatter", "type": "depends_on" },
+    { "from": "ui-client", "to": "prompt-history", "type": "reads" },
+    { "from": "prompt-router", "to": "enhancement-engine", "type": "calls" },
+    { "from": "prompt-router", "to": "provider-config", "type": "reads" },
+    { "from": "enhancement-engine", "to": "mode-policy", "type": "references" },
+    { "from": "enhancement-engine", "to": "claude-api", "type": "calls" },
+    { "from": "enhancement-engine", "to": "openai-api", "type": "calls" },
+    { "from": "enhancement-engine", "to": "gemini-api", "type": "calls" },
+    { "from": "claude-api", "to": "response-parser", "type": "feeds" },
+    { "from": "openai-api", "to": "response-parser", "type": "feeds" },
+    { "from": "gemini-api", "to": "response-parser", "type": "feeds" },
+    { "from": "response-parser", "to": "normalizer", "type": "feeds" },
+    { "from": "normalizer", "to": "ui-client", "type": "feeds" },
+    { "from": "normalizer", "to": "prompt-history", "type": "writes" },
+    { "from": "eval-runner", "to": "golden-dataset", "type": "reads" },
+    { "from": "eval-runner", "to": "enhancement-engine", "type": "calls" },
+    { "from": "eval-runner", "to": "normalizer", "type": "reads" },
+    { "from": "template-library", "to": "prompt-router", "type": "feeds" },
+    { "from": "output-formatter", "to": "normalizer", "type": "reads" }
+  ]
+}
