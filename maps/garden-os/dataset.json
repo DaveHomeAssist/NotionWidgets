@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "meta": {
+    "id": "garden-os",
+    "name": "Garden OS System Topology",
+    "version": "1.0",
+    "description": "Architecture of a browser-native horticultural reasoning engine. 17 components across UI, Engine, Knowledge, and Data layers.",
+    "author": "Dave Robertson",
+    "source": "garden-os/system-topology.html"
+  },
+  "nodes": [
+    { "id": "planner", "label": "Bed Planner", "type": "Application", "layer": "UI", "status": "P0", "meta": { "desc": "Core 3-column grid planner with crop palette, interactive bed layout, and inspect panel. 3,398 lines.", "tags": ["core", "planner", "interactive"], "runtime": "Single HTML file", "owner": "Core", "sla": "Offline-capable", "risks": ["Largest file in the system — fragility risk from monolith size", "Scoring engine embedded inline, not modular"], "nextMoves": ["Extract scoring engine into importable module", "Add workspace versioning UI"] } },
+    { "id": "build-guide", "label": "Cage Build Guide", "type": "Application", "layer": "UI", "status": "P1", "meta": { "desc": "Step-by-step interactive guide for 8x4 ft cattle panel cage assembly. 2,270 lines.", "tags": ["guide", "build", "interactive"], "runtime": "Single HTML file", "owner": "Guides", "sla": "Offline-capable" } },
+    { "id": "ops-guide", "label": "Cage Ops Guide", "type": "Application", "layer": "UI", "status": "P1", "meta": { "desc": "Operational checklist for planting zones, seasonal maintenance, critter defense. 1,313 lines.", "tags": ["guide", "operations", "checklist"], "runtime": "Single HTML file", "owner": "Guides", "sla": "Offline-capable" } },
+    { "id": "score-map", "label": "Scoring Map", "type": "Reference", "layer": "UI", "status": "P2", "meta": { "desc": "Static architecture reference for data flow, derived cell traits, and decision funnel. 845 lines.", "tags": ["reference", "documentation", "scoring"], "runtime": "Single HTML file", "owner": "Documentation", "sla": "Offline-capable" } },
+    { "id": "score-viz", "label": "Score Visualizer", "type": "Tool", "layer": "UI", "status": "P2", "meta": { "desc": "Interactive debug tool. Pick a crop, adjust site inputs, watch scores update in real time. 748 lines.", "tags": ["debug", "visualizer", "scoring"], "runtime": "Single HTML file", "owner": "Debug", "sla": "Offline-capable" } },
+    { "id": "landing", "label": "Landing Page", "type": "Navigation", "layer": "UI", "status": "P1", "meta": { "desc": "Entry point and tool hub. Card-based navigation to all Garden OS tools.", "tags": ["navigation", "entry-point", "hub"], "runtime": "Single HTML file", "owner": "Core", "sla": "Offline-capable" } },
+    { "id": "score-engine", "label": "Scoring Engine", "type": "Algorithm", "layer": "Engine", "status": "P0", "meta": { "desc": "5 weighted factors (sun 2x, support, shade, access, season) plus structural bonus; adjacency applied separately.", "tags": ["core", "scoring", "deterministic"], "runtime": "In-browser compute", "owner": "Core", "sla": "Sync / frame-rate", "risks": ["Embedded inline in planner — not independently testable", "Weight changes require manual spec sync"], "nextMoves": ["Extract as standalone module", "Add automated spec-vs-code validation"] } },
+    { "id": "adjacency", "label": "Adjacency Analysis", "type": "Algorithm", "layer": "Engine", "status": "P0", "meta": { "desc": "Neighbor cell analysis: companion benefits, conflict penalties, water compatibility, same-crop grouping.", "tags": ["core", "adjacency", "companion"], "runtime": "In-browser compute", "owner": "Core", "sla": "Sync / per-cell" } },
+    { "id": "explainer", "label": "Score Explainer", "type": "Algorithm", "layer": "Engine", "status": "P0", "meta": { "desc": "Liebig limiting factor analysis. Identifies the single constraint pulling each cell score down.", "tags": ["core", "explainer", "liebig"], "runtime": "In-browser compute", "owner": "Core", "sla": "Sync / on-inspect" } },
+    { "id": "crop-db", "label": "Crop Database", "type": "Dataset", "layer": "Knowledge", "status": "P0", "meta": { "desc": "38 crops across 8 categories with sun, shade, height, habit, trellis, water, season, companion/conflict tags.", "tags": ["domain", "crops", "dataset"], "runtime": "Compile-time constant", "owner": "Domain", "sla": "Immutable at runtime" } },
+    { "id": "companion-rules", "label": "Companion Rules", "type": "Ruleset", "layer": "Knowledge", "status": "P0", "meta": { "desc": "Companion and conflict tag pairs encoded as arrays per crop. Drives adjacency scoring.", "tags": ["domain", "companion", "rules"], "runtime": "Compile-time constant", "owner": "Domain", "sla": "Immutable at runtime" } },
+    { "id": "gos-schema", "label": "gos-schema.json", "type": "Contract", "layer": "Data", "status": "P0", "meta": { "desc": "JSON Schema (draft 2020-12) defining workspace, bed, cage, site, and planner state structures. 489 lines.", "tags": ["schema", "validation", "contract"], "runtime": "Static JSON file", "owner": "Data", "sla": "Versioned (v1)" } },
+    { "id": "workspace", "label": "Workspace Store", "type": "Persistence", "layer": "Data", "status": "P0", "meta": { "desc": "localStorage read/write at gardenOS_workspace key. Full workspace serialization on every state change.", "tags": ["storage", "localstorage", "persistence"], "runtime": "Browser localStorage", "owner": "Data", "sla": "Browser-bound", "risks": ["Full workspace serialized on every change — potential perf issue at scale", "No incremental save — entire state written each time"] } },
+    { "id": "file-io", "label": "File Import/Export", "type": "I/O", "layer": "Data", "status": "P1", "meta": { "desc": ".gos.json download via URL.createObjectURL, upload via File API. Schema validation + confirm-on-replace.", "tags": ["import", "export", "file-api"], "runtime": "Browser File API", "owner": "Data", "sla": "User-initiated" } },
+    { "id": "migration", "label": "Migration Pipeline", "type": "Process", "layer": "Data", "status": "P0", "meta": { "desc": "loadWorkspace, migrateV0toV1, validateWorkspace, saveWorkspace. Clamps values, nullifies unknown crops.", "tags": ["migration", "validation", "schema"], "runtime": "In-browser on load", "owner": "Data", "sla": "Fail-safe defaults" } }
+  ],
+  "edges": [
+    { "from": "planner", "to": "score-engine", "type": "data", "meta": { "label": "SCORES", "protocol": "Internal fn call", "frequency": "On cell paint / render" } },
+    { "from": "score-engine", "to": "crop-db", "type": "data", "meta": { "label": "READS", "protocol": "Object lookup", "frequency": "Per cell scored" } },
+    { "from": "score-engine", "to": "adjacency", "type": "data", "meta": { "label": "ANALYZES", "protocol": "Internal fn call", "frequency": "Per cell scored" } },
+    { "from": "adjacency", "to": "companion-rules", "type": "data", "meta": { "label": "MATCHES", "protocol": "Tag comparison", "frequency": "Per neighbor pair" } },
+    { "from": "score-engine", "to": "explainer", "type": "data", "meta": { "label": "EXPLAINS", "protocol": "Internal fn call", "frequency": "On inspect" } },
+    { "from": "planner", "to": "workspace", "type": "data", "meta": { "label": "PERSISTS", "protocol": "localStorage.setItem", "frequency": "On every state change" } },
+    { "from": "workspace", "to": "migration", "type": "control", "meta": { "label": "MIGRATES", "protocol": "Internal fn call", "frequency": "On load" } },
+    { "from": "migration", "to": "gos-schema", "type": "control", "meta": { "label": "VALIDATES", "protocol": "Schema enforcement", "frequency": "On load / import" } },
+    { "from": "file-io", "to": "gos-schema", "type": "control", "meta": { "label": "VALIDATES", "protocol": "Schema enforcement", "frequency": "On .gos.json import" } },
+    { "from": "file-io", "to": "workspace", "type": "data", "meta": { "label": "IMPORTS", "protocol": "File API + confirm", "frequency": "User-initiated" } },
+    { "from": "planner", "to": "file-io", "type": "data", "meta": { "label": "EXPORTS", "protocol": "URL.createObjectURL", "frequency": "User-initiated" } },
+    { "from": "score-viz", "to": "score-engine", "type": "data", "meta": { "label": "VISUALIZES", "protocol": "Shared scoring logic", "frequency": "On input change" } },
+    { "from": "score-map", "to": "score-engine", "type": "reference", "meta": { "label": "DOCUMENTS", "protocol": "Static reference", "frequency": "Read-only" } },
+    { "from": "landing", "to": "planner", "type": "reference", "meta": { "label": "NAVIGATES", "protocol": "HTML anchor", "frequency": "On click" } },
+    { "from": "planner", "to": "crop-db", "type": "data", "meta": { "label": "RENDERS", "protocol": "Object iteration", "frequency": "On palette render" } }
+  ]
+}

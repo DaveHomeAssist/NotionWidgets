@@ -1,0 +1,68 @@
+{
+  "title": "Garden OS Topology",
+  "eyebrow": "Garden OS · System Topology 2026",
+  "description": "Architecture of a browser-native horticultural reasoning engine. Pan & zoom to explore, click nodes to inspect, use path mode to trace data flow.",
+  "defaults": {
+    "showHeatmap": false,
+    "initialFocusMode": "All",
+    "initialLayer": "All"
+  },
+  "layers": {
+    "UI":        "#0ea5e9",
+    "Engine":    "#10b981",
+    "Knowledge": "#f59e0b",
+    "Data":      "#818cf8"
+  },
+  "edgeStyles": {
+    "data":      { "stroke": "rgba(16,185,129,0.45)",  "dasharray": null },
+    "control":   { "stroke": "rgba(245,158,11,0.45)",  "dasharray": "5,3" },
+    "reference": { "stroke": "rgba(107,114,128,0.35)", "dasharray": "2,4" }
+  },
+  "inspector": {
+    "fields": [
+      { "key": "type",   "label": "Type" },
+      { "key": "layer",  "label": "Layer" },
+      { "key": "status", "label": "Criticality" }
+    ],
+    "metaFields": [
+      { "key": "runtime",  "label": "Runtime" },
+      { "key": "owner",    "label": "Owner" },
+      { "key": "sla",      "label": "SLA" }
+    ],
+    "metaArrays": [
+      { "key": "risks",     "label": "Risks",      "emptyText": "No risks identified." },
+      { "key": "nextMoves", "label": "Next Moves",  "emptyText": "No next moves planned." }
+    ],
+    "metaChips": ["tags"],
+    "metaLink": null
+  },
+  "focusModes": [
+    { "id": "All", "label": "All" },
+    {
+      "id": "Critical Path",
+      "label": "Critical Path",
+      "filter": { "ids": ["planner", "score-engine", "adjacency", "explainer", "crop-db", "companion-rules", "workspace", "gos-schema", "migration"] }
+    },
+    {
+      "id": "Scoring Flow",
+      "label": "Scoring Flow",
+      "filter": { "ids": ["planner", "score-engine", "adjacency", "explainer", "crop-db", "companion-rules", "score-viz", "score-map"] }
+    },
+    {
+      "id": "Data Layer",
+      "label": "Data Layer",
+      "filter": { "layers": ["Data"], "ids": ["planner"] }
+    },
+    {
+      "id": "UI Tools",
+      "label": "UI Tools",
+      "filter": { "layers": ["UI"] }
+    }
+  ],
+  "stats": [
+    { "label": "Visible",   "count": "visible" },
+    { "label": "UI",        "filter": { "layer": "UI" } },
+    { "label": "Engine",    "filter": { "layer": "Engine" } },
+    { "label": "Data",      "filter": { "layers": ["Knowledge", "Data"] } }
+  ]
+}

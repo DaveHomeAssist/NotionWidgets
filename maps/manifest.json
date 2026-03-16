@@ -15,6 +15,11 @@
       "id": "ai-system",
       "title": "AI System Pipeline",
       "description": "Prompt routing, evaluation, and response pipeline"
+    },
+    {
+      "id": "garden-os",
+      "title": "Garden OS Topology",
+      "description": "Browser-native horticultural reasoning engine architecture"
     }
   ]
 }
