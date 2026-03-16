@@ -110,8 +110,14 @@
 
     svg { display: block; width: 100%; }
 
-    .edge { fill: none; stroke-width: 1.4; }
+    .edge { fill: none; stroke-width: 1.4; transition: opacity 200ms, stroke-width 200ms; }
     .edge.active { stroke-width: 2.2 !important; filter: drop-shadow(0 0 4px currentColor); }
+    .edge.path-dim { opacity: 0.08; }
+    .edge.path-hit { stroke: #818cf8 !important; stroke-width: 2.8 !important; stroke-dasharray: none !important; filter: drop-shadow(0 0 6px rgba(129,140,248,0.5)); }
+    .node.path-dim { opacity: 0.1 !important; pointer-events: none; }
+    .node.path-hit .bg { stroke: #818cf8 !important; stroke-width: 2 !important; filter: drop-shadow(0 0 10px rgba(129,140,248,0.4)); }
+    .node.path-source .bg { stroke: #34d399 !important; stroke-width: 2.2 !important; filter: drop-shadow(0 0 12px rgba(52,211,153,0.5)); }
+    .node.path-target .bg { stroke: #f59e0b !important; stroke-width: 2.2 !important; filter: drop-shadow(0 0 12px rgba(245,158,11,0.5)); }
 
     .node {
       cursor: pointer;
@@ -201,6 +207,31 @@
     }
     .map-select option { background: var(--panel); }
 
+    .path-bar {
+      background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.2); border-radius: var(--radius);
+      padding: 8px 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px;
+    }
+    .path-bar .path-label { font-family: 'DM Mono', monospace; font-size: 10px; color: #a5b4fc; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; }
+    .path-bar .path-chip {
+      background: rgba(129,140,248,0.12); border: 1px solid rgba(129,140,248,0.25); border-radius: 999px;
+      padding: 3px 10px; font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--text);
+    }
+    .path-bar .path-chip.source { border-color: rgba(52,211,153,0.4); color: #34d399; }
+    .path-bar .path-chip.target { border-color: rgba(245,158,11,0.4); color: #f59e0b; }
+    .path-bar .path-arrow { color: var(--muted); font-size: 14px; }
+    .path-bar .path-result { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; }
+    .path-bar .path-clear {
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: var(--radius-sm);
+      color: #ef4444; padding: 4px 10px; cursor: pointer; font-size: 11px; font-weight: 700;
+      font-family: 'DM Sans', sans-serif; margin-left: auto;
+    }
+    .path-bar .path-clear:hover { background: rgba(239,68,68,0.2); }
+    .path-target-select {
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text); padding: 4px 8px; font-size: 11.5px; font-family: 'DM Sans', sans-serif; cursor: pointer; max-width: 200px;
+    }
+    .path-target-select option { background: var(--panel); }
+
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 
     @media (max-width: 1100px) { .main { grid-template-columns: 1fr; } .detail { position: static; max-height: none; } }
@@ -283,8 +314,18 @@
     <div class="seg" id="focusModes"></div>
     <button class="icon-btn" id="themeBtn">Theme</button>
     <button class="icon-btn" id="heatBtn">🌡 Heatmap</button>
+    <button class="icon-btn" id="pathBtn">⤳ Path</button>
     <button class="icon-btn" id="fitBtn">⊡ Fit</button>
     <button class="icon-btn" id="resetBtn">↺ Reset</button>
+  </div>
+
+  <div class="path-bar" id="pathBar" style="display:none">
+    <span class="path-label">Path</span>
+    <span class="path-chip source" id="pathSource">—</span>
+    <span class="path-arrow">→</span>
+    <select class="path-target-select" id="pathTargetSelect"><option value="">Select target…</option></select>
+    <span class="path-result" id="pathResult"></span>
+    <button class="path-clear" id="pathClear">✕ Clear</button>
   </div>
 
   <div class="main">
@@ -391,7 +432,14 @@ const state = {
   selectedId: null,
   focusNode: null,
   heatmap: false,
+  pathMode: false,
+  pathTarget: null,
 };
+
+// ── Path State (derived) ─────────────────────────────────────────────────────
+let pathNodeIds = new Set();
+let pathEdgeKeys = new Set();  // "from→to" keys
+let pathSteps = [];            // ordered node IDs in the path
 
 // ── URL State Sync ───────────────────────────────────────────────────────────
 function readStateFromUrl() {
@@ -404,6 +452,7 @@ function readStateFromUrl() {
     heat:  p.get('heat')  || null,
     q:     p.get('q')     || null,
     theme: p.get('theme') || null,
+    path:  p.get('path')  || null,
   };
 }
 
@@ -423,6 +472,7 @@ function writeStateToUrl() {
     if (state.focus !== 'All') sp.set('focus', state.focus); else sp.delete('focus');
     if (state.heatmap) sp.set('heat', '1'); else sp.delete('heat');
     if (state.search) sp.set('q', state.search); else sp.delete('q');
+    if (state.pathMode && state.pathTarget) sp.set('path', `${state.selectedId},${state.pathTarget}`); else sp.delete('path');
 
     // Theme from attribute
     const theme = document.documentElement.getAttribute('data-theme');
@@ -430,6 +480,95 @@ function writeStateToUrl() {
 
     history.replaceState(null, '', url);
   }, 200);
+}
+
+// ── Path Finding (BFS) ───────────────────────────────────────────────────────
+function findShortestPath(fromId, toId) {
+  if (!fromId || !toId || fromId === toId) return [fromId].filter(Boolean);
+  const visited = new Set([fromId]);
+  const parent = { [fromId]: null };
+  const queue = [fromId];
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (current === toId) {
+      // Reconstruct path
+      const path = [];
+      let node = toId;
+      while (node !== null) {
+        path.unshift(node);
+        node = parent[node];
+      }
+      return path;
+    }
+    const neighbors = adjacency[current] || new Set();
+    for (const nbr of neighbors) {
+      if (!visited.has(nbr)) {
+        visited.add(nbr);
+        parent[nbr] = current;
+        queue.push(nbr);
+      }
+    }
+  }
+  return []; // no path found
+}
+
+function computePathHighlights() {
+  pathNodeIds = new Set();
+  pathEdgeKeys = new Set();
+  pathSteps = [];
+
+  if (!state.pathMode || !state.selectedId || !state.pathTarget) return;
+
+  const steps = findShortestPath(state.selectedId, state.pathTarget);
+  if (!steps.length) return;
+
+  pathSteps = steps;
+  steps.forEach(id => pathNodeIds.add(id));
+
+  // Build edge keys for both directions (graph is undirected in adjacency)
+  for (let i = 0; i < steps.length - 1; i++) {
+    pathEdgeKeys.add(`${steps[i]}→${steps[i+1]}`);
+    pathEdgeKeys.add(`${steps[i+1]}→${steps[i]}`);
+  }
+}
+
+function updatePathBar() {
+  const bar = document.getElementById('pathBar');
+  const sourceEl = document.getElementById('pathSource');
+  const resultEl = document.getElementById('pathResult');
+  const targetSel = document.getElementById('pathTargetSelect');
+
+  if (!state.pathMode) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+
+  // Source chip
+  const srcNode = state.selectedId ? nodeMap[state.selectedId] : null;
+  sourceEl.textContent = srcNode ? srcNode.label : '—';
+
+  // Target dropdown — populate with all nodes except source
+  const currentTarget = targetSel.value;
+  targetSel.innerHTML = '<option value="">Select target…</option>';
+  nodes.forEach(n => {
+    if (n.id === state.selectedId) return;
+    const opt = document.createElement('option');
+    opt.value = n.id;
+    opt.textContent = n.label;
+    if (n.id === state.pathTarget) opt.selected = true;
+    targetSel.appendChild(opt);
+  });
+
+  // Result text
+  if (!state.pathTarget) {
+    resultEl.textContent = '';
+  } else if (pathSteps.length > 0) {
+    resultEl.textContent = `${pathSteps.length - 1} hop${pathSteps.length - 1 !== 1 ? 's' : ''} · ${pathSteps.length} nodes`;
+  } else {
+    resultEl.textContent = 'No path found';
+  }
 }
 
 // ── Status Display ───────────────────────────────────────────────────────────
@@ -551,7 +690,10 @@ async function loadMapPack(mapId) {
       selectedId: nodes[0]?.id || null,
       focusNode: null,
       heatmap: defaultHeatmap,
+      pathMode: false,
+      pathTarget: null,
     });
+    document.getElementById('pathBtn').textContent = '⤳ Path';
 
     document.getElementById('search').value = '';
     document.getElementById('heatBtn').textContent = defaultHeatmap ? '🌡 Heatmap ON' : '🌡 Heatmap';
@@ -845,11 +987,14 @@ function renderMap(visIds) {
     const active = state.selectedId === from || state.selectedId === to;
     const style = edgeStyles[type] || { stroke: 'rgba(120,145,190,0.35)' };
 
+    const isPathEdge = state.pathMode && state.pathTarget && (pathEdgeKeys.has(`${from}→${to}`) || pathEdgeKeys.has(`${to}→${from}`));
+    const isPathDim = state.pathMode && state.pathTarget && pathSteps.length > 0 && !isPathEdge;
+
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${x1} ${y1} C${x1} ${my},${x2} ${my},${x2} ${y2}`);
-    path.setAttribute('class', `edge${active ? ' active' : ''}`);
+    path.setAttribute('class', `edge${active ? ' active' : ''}${isPathEdge ? ' path-hit' : ''}${isPathDim ? ' path-dim' : ''}`);
     path.setAttribute('stroke', style.stroke);
-    if (style.dasharray) path.setAttribute('stroke-dasharray', style.dasharray);
+    if (style.dasharray && !isPathEdge) path.setAttribute('stroke-dasharray', style.dasharray);
     path.setAttribute('marker-end', `url(#arr-${type})`);
     edgeGrp.appendChild(path);
   });
@@ -867,8 +1012,13 @@ function renderMap(visIds) {
     const tags = n.meta?.tags || [];
     const risks = n.meta?.risks || [];
 
+    const isPathNode = state.pathMode && state.pathTarget && pathNodeIds.has(n.id);
+    const isPathDimNode = state.pathMode && state.pathTarget && pathSteps.length > 0 && !isPathNode;
+    const isPathSrc = state.pathMode && n.id === state.selectedId && state.pathTarget;
+    const isPathTgt = state.pathMode && n.id === state.pathTarget;
+
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', `node${n.id === state.selectedId ? ' selected' : ''}${!vis ? ' dimmed' : ''}${state.heatmap ? ' heat-visible' : ''}`);
+    g.setAttribute('class', `node${n.id === state.selectedId ? ' selected' : ''}${!vis ? ' dimmed' : ''}${state.heatmap ? ' heat-visible' : ''}${isPathSrc ? ' path-source' : ''}${isPathTgt ? ' path-target' : ''}${isPathNode && !isPathSrc && !isPathTgt ? ' path-hit' : ''}${isPathDimNode ? ' path-dim' : ''}`);
     g.setAttribute('data-id', n.id);
     g.setAttribute('transform', `translate(${px},${py})`);
     g.setAttribute('tabindex', vis ? 0 : -1);
@@ -1034,6 +1184,19 @@ function renderDetail(visIds) {
     ${arraysHtml}
     ${chipsHtml}
 
+    ${state.pathMode && pathSteps.length > 1 ? `
+    <div class="d-card">
+      <div class="d-kicker">⤳ Path (${pathSteps.length - 1} hop${pathSteps.length - 1 !== 1 ? 's' : ''})</div>
+      <ul class="d-list" style="margin-top:6px">
+        ${pathSteps.map((id, i) => {
+          const pn = nodeMap[id];
+          const marker = i === 0 ? '●' : i === pathSteps.length - 1 ? '◎' : '→';
+          const col = i === 0 ? '#34d399' : i === pathSteps.length - 1 ? '#f59e0b' : '#818cf8';
+          return `<li style="color:${col};cursor:pointer" data-path-node="${id}">${marker} ${esc(pn?.label || id)} <span>(${esc(pn?.layer || '')})</span></li>`;
+        }).join('')}
+      </ul>
+    </div>` : ''}
+
     <div class="d-card">
       <div class="d-kicker">🌡 Impact — top nodes by connections</div>
       <table class="impact-table">
@@ -1055,10 +1218,20 @@ function renderDetail(visIds) {
     layoutCache = null;
     render(true);
   });
+
+  // Path chain click-to-navigate
+  panel.querySelectorAll('[data-path-node]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.selectedId = el.dataset.pathNode;
+      render(false);
+    });
+  });
 }
 
 // ── Render: Orchestrator ─────────────────────────────────────────────────────
 function render(refit = true) {
+  computePathHighlights();
+  updatePathBar();
   renderFocusModes();
   const visIds = getVisibleIds();
   renderStats(visIds);
@@ -1137,6 +1310,25 @@ document.getElementById('themeBtn').addEventListener('click', () => {
   writeStateToUrl();
 });
 
+document.getElementById('pathBtn').addEventListener('click', () => {
+  state.pathMode = !state.pathMode;
+  if (!state.pathMode) { state.pathTarget = null; }
+  document.getElementById('pathBtn').textContent = state.pathMode ? '⤳ Path ON' : '⤳ Path';
+  render(false);
+});
+
+document.getElementById('pathTargetSelect').addEventListener('change', e => {
+  state.pathTarget = e.target.value || null;
+  render(false);
+});
+
+document.getElementById('pathClear').addEventListener('click', () => {
+  state.pathMode = false;
+  state.pathTarget = null;
+  document.getElementById('pathBtn').textContent = '⤳ Path';
+  render(false);
+});
+
 document.getElementById('fitBtn').addEventListener('click', () => {
   if (layoutCache) fitToView(layoutCache.w, layoutCache.h);
 });
@@ -1151,10 +1343,13 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     selectedId: nodes[0]?.id || null,
     focusNode: null,
     heatmap: defaults.showHeatmap || false,
+    pathMode: false,
+    pathTarget: null,
   });
   document.getElementById('search').value = '';
   document.getElementById('layerF').value = state.layer;
   document.getElementById('heatBtn').textContent = state.heatmap ? '🌡 Heatmap ON' : '🌡 Heatmap';
+  document.getElementById('pathBtn').textContent = '⤳ Path';
   layoutCache = null;
   render();
 });
@@ -1190,6 +1385,15 @@ document.getElementById('nodeGroup').onclick = handleNodeClick;
   if (urlState.heat === '1') { state.heatmap = true; document.getElementById('heatBtn').textContent = '🌡 Heatmap ON'; }
   if (urlState.q) { state.search = urlState.q; document.getElementById('search').value = urlState.q; }
   if (urlState.theme) applyTheme(urlState.theme);
+  if (urlState.path) {
+    const [src, tgt] = urlState.path.split(',');
+    if (src && tgt && nodeMap[src] && nodeMap[tgt]) {
+      state.selectedId = src;
+      state.pathMode = true;
+      state.pathTarget = tgt;
+      document.getElementById('pathBtn').textContent = '⤳ Path ON';
+    }
+  }
 
   layoutCache = null;
   render();
