@@ -260,6 +260,17 @@
       html:not([data-theme]) .node .n-name { fill: #1a2238; }
       html:not([data-theme]) .node .n-meta { fill: #6b7a99; }
       html:not([data-theme]) .impact-table td { border-bottom-color: rgba(0,0,0,0.05); }
+      html:not([data-theme]) .edge.path-dim { opacity: 0.1; }
+      html:not([data-theme]) .edge.path-hit { stroke: #4f46e5 !important; filter: drop-shadow(0 0 4px rgba(79,70,229,0.35)); }
+      html:not([data-theme]) .node.path-dim { opacity: 0.12 !important; }
+      html:not([data-theme]) .node.path-hit .bg { stroke: #4f46e5 !important; filter: drop-shadow(0 0 8px rgba(79,70,229,0.25)); }
+      html:not([data-theme]) .node.path-source .bg { stroke: #059669 !important; filter: drop-shadow(0 0 8px rgba(5,150,105,0.3)); }
+      html:not([data-theme]) .node.path-target .bg { stroke: #d97706 !important; filter: drop-shadow(0 0 8px rgba(217,119,6,0.3)); }
+      html:not([data-theme]) .path-bar { background: rgba(79,70,229,0.06); border-color: rgba(79,70,229,0.15); }
+      html:not([data-theme]) .path-bar .path-label { color: #4f46e5; }
+      html:not([data-theme]) .path-bar .path-chip { background: rgba(79,70,229,0.08); border-color: rgba(79,70,229,0.2); }
+      html:not([data-theme]) .path-bar .path-chip.source { border-color: rgba(5,150,105,0.3); color: #059669; }
+      html:not([data-theme]) .path-bar .path-chip.target { border-color: rgba(217,119,6,0.3); color: #d97706; }
     }
 
     html[data-theme='light'] {
@@ -284,6 +295,17 @@
     html[data-theme='light'] .node .n-name { fill: #1a2238; }
     html[data-theme='light'] .node .n-meta { fill: #6b7a99; }
     html[data-theme='light'] .impact-table td { border-bottom-color: rgba(0,0,0,0.05); }
+    html[data-theme='light'] .edge.path-dim { opacity: 0.1; }
+    html[data-theme='light'] .edge.path-hit { stroke: #4f46e5 !important; filter: drop-shadow(0 0 4px rgba(79,70,229,0.35)); }
+    html[data-theme='light'] .node.path-dim { opacity: 0.12 !important; }
+    html[data-theme='light'] .node.path-hit .bg { stroke: #4f46e5 !important; filter: drop-shadow(0 0 8px rgba(79,70,229,0.25)); }
+    html[data-theme='light'] .node.path-source .bg { stroke: #059669 !important; filter: drop-shadow(0 0 8px rgba(5,150,105,0.3)); }
+    html[data-theme='light'] .node.path-target .bg { stroke: #d97706 !important; filter: drop-shadow(0 0 8px rgba(217,119,6,0.3)); }
+    html[data-theme='light'] .path-bar { background: rgba(79,70,229,0.06); border-color: rgba(79,70,229,0.15); }
+    html[data-theme='light'] .path-bar .path-label { color: #4f46e5; }
+    html[data-theme='light'] .path-bar .path-chip { background: rgba(79,70,229,0.08); border-color: rgba(79,70,229,0.2); }
+    html[data-theme='light'] .path-bar .path-chip.source { border-color: rgba(5,150,105,0.3); color: #059669; }
+    html[data-theme='light'] .path-bar .path-chip.target { border-color: rgba(217,119,6,0.3); color: #d97706; }
   </style>
 </head>
 <body>
