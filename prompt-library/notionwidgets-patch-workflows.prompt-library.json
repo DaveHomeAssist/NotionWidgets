@@ -1,0 +1,32 @@
+[
+  {
+    "id": "patch_validated_pass_001",
+    "title": "Validated Patch Pass",
+    "original": "You are applying a validated patch to an existing codebase.\n\nRules:\n- inspect the relevant files first\n- preserve current behavior unless the requested fix requires a behavior change\n- make the smallest viable safe edits\n- do not refactor unrelated code\n- keep naming and architecture consistent with the target project\n- validate the changed path with the lightest useful check available\n\nExecution:\n1. Restate the target issue in one sentence.\n2. Identify the exact files and functions involved.\n3. Apply the patch directly.\n4. Verify the change with code-level or runtime-level checks.\n5. Return:\n   - summary\n   - files touched\n   - exact changes\n   - why safe\n   - validation checklist\n   - follow-up issues not touched\n\nIf the repo contains dirty unrelated work, avoid those files unless the task explicitly requires them.",
+    "enhanced": "You are applying a validated patch to an existing codebase.\n\nRules:\n- inspect the relevant files first\n- preserve current behavior unless the requested fix requires a behavior change\n- make the smallest viable safe edits\n- do not refactor unrelated code\n- keep naming and architecture consistent with the target project\n- validate the changed path with the lightest useful check available\n\nExecution:\n1. Restate the target issue in one sentence.\n2. Identify the exact files and functions involved.\n3. Apply the patch directly.\n4. Verify the change with code-level or runtime-level checks.\n5. Return:\n   - summary\n   - files touched\n   - exact changes\n   - why safe\n   - validation checklist\n   - follow-up issues not touched\n\nIf the repo contains dirty unrelated work, avoid those files unless the task explicitly requires them.",
+    "variants": [],
+    "notes": "Reusable patch-pass workflow for scoped code changes.",
+    "tags": ["patch", "workflow", "verification", "scoped-changes"],
+    "collection": "Patch Workflow Patterns"
+  },
+  {
+    "id": "patch_prototype_p1_002",
+    "title": "Prototype P1 Stability Sweep",
+    "original": "You are doing a P1 stability pass on a prototype UI file.\n\nConstraints:\n- smallest safe change set only\n- preserve design language\n- no framework migration\n- no dependency changes\n- no unrelated cleanup\n\nPrioritize these P1 fixes:\n1. Reveal and animation safety: no hidden content if IntersectionObserver is missing, and respect reduced-motion preferences.\n2. Scroll/nav stability: passive listeners where appropriate, initial active-state sync, cleanup of pending animation frames or listeners.\n3. DOM side-effect cleanup: remove injected styles, links, or timers on unmount when the component owns them.\n4. Keyboard and landmark truth: skip link targets a real main landmark, active nav state is exposed with aria semantics.\n5. Mobile navigation baseline: ensure the nav remains usable at narrow widths; optionally upgrade to a hamburger menu if that is the cleanest fix.\n\nReturn:\n- summary\n- files touched\n- exact P1 fixes applied\n- how each was verified\n- residual risks",
+    "enhanced": "You are doing a P1 stability pass on a prototype UI file.\n\nConstraints:\n- smallest safe change set only\n- preserve design language\n- no framework migration\n- no dependency changes\n- no unrelated cleanup\n\nPrioritize these P1 fixes:\n1. Reveal and animation safety: no hidden content if IntersectionObserver is missing, and respect reduced-motion preferences.\n2. Scroll/nav stability: passive listeners where appropriate, initial active-state sync, cleanup of pending animation frames or listeners.\n3. DOM side-effect cleanup: remove injected styles, links, or timers on unmount when the component owns them.\n4. Keyboard and landmark truth: skip link targets a real main landmark, active nav state is exposed with aria semantics.\n5. Mobile navigation baseline: ensure the nav remains usable at narrow widths; optionally upgrade to a hamburger menu if that is the cleanest fix.\n\nReturn:\n- summary\n- files touched\n- exact P1 fixes applied\n- how each was verified\n- residual risks",
+    "variants": [],
+    "notes": "Best fit for archived landing-page prototypes like Metagrid.",
+    "tags": ["prototype", "p1", "stability", "accessibility", "navigation"],
+    "collection": "Patch Workflow Patterns"
+  },
+  {
+    "id": "patch_widget_hardening_003",
+    "title": "Single-File Widget Hardening",
+    "original": "Harden this self-contained HTML widget without changing its product contract.\n\nConstraints:\n- single-file HTML only\n- no external JS or CSS dependencies\n- preserve URL parameter schema and legacy aliases unless explicitly told otherwise\n- render user content safely with DOM APIs\n- smallest viable safe changes only\n\nAudit and patch for:\n- reduced-motion handling\n- ARIA state parity for interactive controls\n- live-region semantics for transient success/error states\n- parameter parsing and token validation drift\n- predictable embed behavior at narrow iframe widths\n\nReturn:\n- summary\n- files touched\n- exact changes\n- why safe\n- validation checklist\n- follow-up items still open",
+    "enhanced": "Harden this self-contained HTML widget without changing its product contract.\n\nConstraints:\n- single-file HTML only\n- no external JS or CSS dependencies\n- preserve URL parameter schema and legacy aliases unless explicitly told otherwise\n- render user content safely with DOM APIs\n- smallest viable safe changes only\n\nAudit and patch for:\n- reduced-motion handling\n- ARIA state parity for interactive controls\n- live-region semantics for transient success/error states\n- parameter parsing and token validation drift\n- predictable embed behavior at narrow iframe widths\n\nReturn:\n- summary\n- files touched\n- exact changes\n- why safe\n- validation checklist\n- follow-up items still open",
+    "variants": [],
+    "notes": "Scoped hardening workflow for the shipped NotionWidgets surfaces.",
+    "tags": ["single-file", "widget", "notion", "url-params", "hardening"],
+    "collection": "Patch Workflow Patterns"
+  }
+]

@@ -4,6 +4,18 @@ NotionWidgets is a small catalog of self-contained HTML widgets for Notion embed
 
 Live site: `https://davehomeassist.github.io/NotionWidgets/`
 
+## Prompt library
+
+An importable Prompt Lab pack for the NotionWidgets patch workflow lives at:
+
+`prompt-library/notionwidgets-patch-workflows.prompt-library.json`
+
+It mirrors the validated patch workflow prompts used across the Prompt Lab ecosystem, including:
+
+- scoped validated patch passes
+- prototype P1 stability sweeps
+- single-file widget hardening
+
 ## Live widgets
 
 | Widget | File | Live URL |
