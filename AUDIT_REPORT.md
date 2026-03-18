@@ -1,170 +1,145 @@
 # NotionWidgets Audit Report
 
-Date: 2026-03-14
+Date: 2026-03-18
 
 ## Executive Summary
 
-`NotionWidgets` is a small catalog of self-contained HTML widgets for Notion embeds. The current architecture is appropriate for the scope:
+`NotionWidgets` is in better shape than it was on March 14.
 
-- single-file widgets
-- URL-parameter-driven configuration
-- no backend
-- no external JavaScript or CSS dependencies
-- safe DOM rendering patterns in the interactive widget
+The repo now has:
 
-The repository is in materially better shape than the earlier external audit suggested. The main risks are now accessibility, motion/UX polish, and long-term consistency of parameter parsing across widgets.
+- the four shipped widgets
+- the March 18 UX/UI audit in [docs/UX_AUDIT_2026-03-18.md](docs/UX_AUDIT_2026-03-18.md)
+- a hardening pass shipped in commit `7e60074`
 
-## Summary
+That hardening pass closed the most immediate reliability and safety issues:
 
-- Total issues: 5
+- duplicate submit protection in `client-approval.html`
+- stale `nodeMap` guards in `notion-workspace-map.html`
+- sanitization for computed map colors, dash arrays, and external links
+- improved ARIA state for approval actions, map controls, and project phase progress
+- explicit CSP/CDN fallback messaging for blocked D3/Dagre loads
+- finite numeric parsing for Quest Log XP fields
+
+The repo is now safer and more internally consistent, but it is not "done." The biggest remaining gap is still product-level contract clarity: three widgets are truly self-contained single-file embeds, while the workspace map is a larger interactive application with runtime dataset loads and CDN-backed rendering dependencies.
+
+## Current Status
+
+- Total issues: 3
 - Critical: 0
-- High: 0
-- Medium: 4
-- Low: 1
-- Estimated total hours: 15
+- High: 1
+- Medium: 2
+- Estimated total hours: 8-12
 
-## Findings
+## Closed Since March 14
 
-### 1. Interactive state is not fully exposed to assistive tech
+### 1. Client Approval duplicate submission
+
+- Status: Fixed
+- File:
+  - `client-approval.html`
+
+The submit action now uses an in-flight guard in addition to the disabled button state, which closes the rapid-click duplicate `postMessage` window.
+
+### 2. Workspace Map stale node crashes
+
+- Status: Fixed
+- File:
+  - `notion-workspace-map.html`
+
+Stale `selectedId`, `focusNode`, and path targets are now normalized through guard helpers before render and URL restore paths use safe lookups.
+
+### 3. Workspace Map attribute sanitization gaps
+
+- Status: Fixed
+- File:
+  - `notion-workspace-map.html`
+
+Computed colors, dash arrays, and outbound links are now sanitized before they reach SVG/HTML attributes.
+
+### 4. Accessibility semantics on interactive controls
+
+- Status: Fixed
+- Files:
+  - `client-approval.html`
+  - `notion-workspace-map.html`
+  - `project-status.html`
+
+Approval buttons now expose `aria-pressed`, the error bar is a live region, map toggles expose pressed state, and project phases now expose progress semantics.
+
+### 5. Quest Log malformed XP handling
+
+- Status: Fixed
+- File:
+  - `quest-log.html`
+
+The widget now uses explicit finite-number parsing instead of relying on loose `parseInt(...) || fallback` behavior.
+
+## Remaining Findings
+
+### 1. Workspace Map still breaks the repo's clean "single-file, no external dependencies" story
+
+- Category: Architecture
+- Severity: High
+- Affected path:
+  - `notion-workspace-map.html`
+
+The new fallback message is the correct defensive move, but it does not solve the underlying contract mismatch. The graph explorer still loads D3 and Dagre from CDN and fetches external JSON map packs at runtime. That is acceptable technically, but it is not the same deployment model as the other three widgets.
+
+Recommended action:
+
+- Decide one of these explicitly:
+  - keep the workspace map in this repo, but document it as an exception
+  - move the map into a clearly separate "interactive explorer" category
+  - localize dependencies and remove the exception entirely
+
+### 2. Reduced-motion support is still missing across the smaller widgets
 
 - Category: Accessibility
 - Severity: Medium
 - Affected paths:
-  - `client-approval.html`
-
-The approval widget has strong visual interaction, but selected action state, transient errors, and success confirmation are not fully exposed to assistive technologies. The action buttons toggle visual state only, and the error/success surfaces are not implemented as clear live regions.
-
-Recommended actions:
-
-- Add `aria-pressed` to the three action buttons and keep it synchronized with selection state.
-- Mark the error bar and success overlay with live-region semantics.
-- Keep focus behavior explicit after validation failures and after reset.
-
-Example:
-
-```js
-// Before
-btn.classList.add('selected');
-
-// After
-btn.classList.add('selected');
-btn.setAttribute('aria-pressed', 'true');
-```
-
-Estimated time: 3 hours
-
-### 2. Animations do not respect reduced-motion preferences
-
-- Category: UX
-- Severity: Medium
-- Affected paths:
   - `project-status.html`
   - `quest-log.html`
   - `client-approval.html`
 
-All three widgets use visual motion such as count-up timers, shimmer, particles, badge pulses, or staged reveals. The presentation is strong, but there is no full reduced-motion fallback for users who opt out of animation.
+The widgets still animate count-ups, shimmer, particles, badge pulses, and staged reveals without a `prefers-reduced-motion` escape hatch.
 
-Recommended actions:
+Recommended action:
 
-- Add a `prefers-reduced-motion: reduce` CSS block for non-essential animations.
-- Skip count-up and particle effects in JavaScript when reduced motion is requested.
-- Render final values immediately when reduced motion is active.
+- add `prefers-reduced-motion` CSS
+- skip timer/count-up effects in JS when reduced motion is requested
+- render final values immediately
 
-Example:
+### 3. The product still lacks a non-technical embed configurator
 
-```js
-if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-  xpFill.style.width = xpPct + '%';
-  xpCurrentEl.textContent = config.xp;
-}
-```
-
-Estimated time: 4 hours
-
-### 3. Validation and parsing logic is duplicated across widgets
-
-- Category: Architecture
+- Category: Usability
 - Severity: Medium
 - Affected paths:
-  - `project-status.html`
-  - `quest-log.html`
-  - `client-approval.html`
+  - `index.html`
+  - `README.md`
 
-The repo correctly uses URL parameters as the public configuration interface, but each widget reimplements its own parsing, clamping, token normalization, and fallback rules inline. This is acceptable for a small pack, but it raises drift risk as contracts evolve.
+The widgets are still configured by hand-built query strings. That is fine for the author and hostile for everyone else.
 
-Recommended actions:
+Recommended action:
 
-- Standardize a shared parsing pattern across widgets for arrays, clamping, token aliases, and defaults.
-- If the single-file rule remains absolute, document the shared pattern clearly in the repo README and mirror it consistently.
-- Add a small repo-level checklist for future widgets.
-
-Estimated time: 3 hours
-
-### 4. Client approval messaging still allows implicit target-origin fallback
-
-- Category: Integration
-- Severity: Medium
-- Affected paths:
-  - `client-approval.html`
-
-The approval widget already validates `targetOrigin` far better than most embed tools, but it still falls back to `document.referrer` when the explicit param is absent. That is convenient, but less predictable than requiring a declared target for production embeds.
-
-Recommended actions:
-
-- Prefer explicit `targetOrigin` only for production embeds.
-- Keep the current fallback only for local preview if needed.
-- Update docs and examples to push the strict contract first.
-
-Example:
-
-```js
-// Before
-const raw = rawTargetOrigin || (document.referrer || '').trim();
-
-// After
-const raw = (P.get('targetOrigin') || '').trim();
-```
-
-Estimated time: 2 hours
-
-### 5. Legacy delimited parameter formats add ongoing complexity
-
-- Category: Code Quality
-- Severity: Low
-- Affected paths:
-  - `project-status.html`
-  - `quest-log.html`
-
-Both widgets still support old comma-and-colon parameter formats alongside JSON array params. That backward compatibility is useful, but it keeps extra parsing branches and console warnings alive in the codepath.
-
-Recommended actions:
-
-- Keep legacy parsing for now, but mark a clear removal version in the README.
-- Prefer JSON-only examples everywhere public.
-- Remove legacy parsing after existing embeds are migrated.
-
-Estimated time: 3 hours
+- build a small URL generator surface
+- keep it static and local, no backend needed
+- output validated embed URLs for each widget
 
 ## Quick Wins
 
-- Add `prefers-reduced-motion` handling across all three widgets.
-- Add `aria-pressed` and live-region semantics to `client-approval.html`.
-- Make `targetOrigin` explicit-only in production examples and docs.
-- Standardize one repo-wide URL param parsing pattern in `README.md`.
-
-## Long-Term Improvements
-
-- Build a small configurator page that generates valid embed URLs without changing the single-file widget architecture.
-- Add a lightweight visual QA checklist for common Notion embed widths and light/dark color schemes.
-- Add a small validation script that checks example URLs against documented widget contracts.
+- Add reduced-motion handling to the three smaller widgets.
+- Clarify the workspace-map exception in `README.md`.
+- Add a simple widget URL builder to `index.html` or as a separate helper page.
 
 ## Notes
 
-This report supersedes the earlier external audit that referenced non-existent API integrations, missing folders, and unsupported asset-loading claims. The current repository does not show evidence of:
+This report supersedes the older March 14 status summary.
 
-- exposed API keys
-- external API fetches
-- Google Fonts or third-party asset dependencies in shipped widget surfaces
-- missing URL-parameter configuration support
+For the blunt file-by-file read, use:
 
-The actual state of the repo is substantially healthier than that prior report implied.
+- [docs/UX_AUDIT_2026-03-18.md](docs/UX_AUDIT_2026-03-18.md)
+
+For the shipped hardening baseline, use:
+
+- commit `7e60074` `Harden widgets and add UX audit`
