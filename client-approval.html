@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Approval Hub</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon/favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon/favicon-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/favicon/apple-touch-icon.png" />
@@ -469,15 +470,15 @@
     <div class="action-section">
       <div class="action-label">Your Decision</div>
       <div class="action-buttons" id="actionBtns">
-        <button class="action-btn approve-btn" data-action="approve">
+        <button class="action-btn approve-btn" data-action="approve" aria-label="Approve deliverables" aria-pressed="false">
           <span class="action-icon">👍</span>
           <span class="action-text">Approve</span>
         </button>
-        <button class="action-btn revise-btn" data-action="revisions">
+        <button class="action-btn revise-btn" data-action="revisions" aria-label="Request revisions" aria-pressed="false">
           <span class="action-icon">✏️</span>
           <span class="action-text">Revisions</span>
         </button>
-        <button class="action-btn restart-btn" data-action="restart">
+        <button class="action-btn restart-btn" data-action="restart" aria-label="Request restart" aria-pressed="false">
           <span class="action-icon">↩️</span>
           <span class="action-text">Restart</span>
         </button>
@@ -485,15 +486,15 @@
     </div>
 
     <div class="feedback-section" id="feedbackSection">
-      <textarea class="feedback-area" id="feedbackArea" placeholder="Add your feedback, revision notes, or questions..."></textarea>
+      <textarea class="feedback-area" id="feedbackArea" aria-label="Feedback details" placeholder="Add your feedback, revision notes, or questions..."></textarea>
       <div class="feedback-hint">Be specific — reference sections, colors, copy, or layouts</div>
     </div>
 
-    <div class="error-bar" id="errorBar"></div>
+    <div class="error-bar" id="errorBar" role="alert" aria-live="polite"></div>
 
     <div class="submit-row" id="submitRow">
-      <button class="submit-btn ghost" id="cancelBtn">Cancel</button>
-      <button class="submit-btn primary" id="submitBtn">Submit Feedback</button>
+      <button class="submit-btn ghost" id="cancelBtn" aria-label="Cancel this response">Cancel</button>
+      <button class="submit-btn primary" id="submitBtn" aria-label="Submit feedback to parent embed">Submit Feedback</button>
     </div>
 
     <div class="timeline-section">
@@ -664,11 +665,14 @@
   const submitRow = document.getElementById('submitRow');
   const btns = document.querySelectorAll('.action-btn');
   const feedbackArea = document.getElementById('feedbackArea');
+  let submitInFlight = false;
 
   btns.forEach(btn => {
     btn.addEventListener('click', () => {
       btns.forEach(b => b.classList.remove('selected'));
+      btns.forEach(b => b.setAttribute('aria-pressed', 'false'));
       btn.classList.add('selected');
+      btn.setAttribute('aria-pressed', 'true');
       selectedAction = btn.dataset.action;
       feedbackSection.classList.add('visible');
       submitRow.classList.add('visible');
@@ -685,6 +689,7 @@
 
   function resetInteractionState() {
     btns.forEach(b => b.classList.remove('selected'));
+    btns.forEach(b => b.setAttribute('aria-pressed', 'false'));
     feedbackSection.classList.remove('visible');
     submitRow.classList.remove('visible');
     selectedAction = null;
@@ -709,7 +714,9 @@
 
   const submitBtn = document.getElementById('submitBtn');
   function setSubmitPending(isPending) {
+    submitInFlight = isPending;
     submitBtn.disabled = isPending;
+    submitBtn.setAttribute('aria-busy', isPending ? 'true' : 'false');
     submitBtn.style.opacity = isPending ? '0.7' : '';
     submitBtn.style.cursor = isPending ? 'not-allowed' : '';
     submitBtn.textContent = isPending ? 'Sending...' : 'Submit Feedback';
@@ -728,7 +735,7 @@
   }
 
   document.getElementById('submitBtn').addEventListener('click', () => {
-    if (!selectedAction || submitBtn.disabled) return;
+    if (!selectedAction || submitBtn.disabled || submitInFlight) return;
 
     const feedback = feedbackArea.value.trim();
     if ((selectedAction === 'revisions' || selectedAction === 'restart') && feedback.length < 10) {

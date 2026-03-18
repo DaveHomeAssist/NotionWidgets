@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quest Log — Gamified Tasks</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon/favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon/favicon-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/favicon/apple-touch-icon.png" />
@@ -432,6 +433,11 @@
     return Math.max(min, Math.min(max, v));
   }
 
+  function parseFiniteInt(raw, fallback) {
+    var parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
   function parseJsonArrayParam(raw, fallbackParser) {
     if (!raw || !raw.trim()) return [];
     try {
@@ -500,10 +506,10 @@
     title: P.get('title') || 'Project Champion',
     class: P.get('class') || 'Creative Director',
     avatar: P.get('avatar') || '⚔️',
-    level: clampNumber(parseInt(P.get('level')) || 7, 1, 999),
-    xp: clampNumber(parseInt(P.get('xp')) || 340, 0, 999999),
-    xpMax: clampNumber(parseInt(P.get('xpMax')) || 500, 1, 999999),
-    streak: clampNumber(parseInt(P.get('streak')) || 12, 0, 99999),
+    level: clampNumber(parseFiniteInt(P.get('level'), 7), 1, 999),
+    xp: clampNumber(parseFiniteInt(P.get('xp'), 340), 0, 999999),
+    xpMax: clampNumber(parseFiniteInt(P.get('xpMax'), 500), 1, 999999),
+    streak: clampNumber(parseFiniteInt(P.get('streak'), 12), 0, 99999),
     nextReward: P.get('nextReward') || P.get('reward') || 'Custom Title',
     quests: quests,
     stats: stats

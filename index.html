@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NotionWidgets</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon/favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon/favicon-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/favicon/apple-touch-icon.png" />
@@ -321,6 +322,11 @@
     white-space: nowrap;
   }
 
+  .url-block code {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
   .link-row {
     margin-top: auto;
   }
@@ -337,6 +343,17 @@
     background: var(--surface-2);
     font-size: 13px;
     font-weight: 600;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .link:hover {
+    border-color: currentColor;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .link:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
   }
 
   .link.primary {
@@ -400,10 +417,10 @@
 <a href="https://davehomeassist.github.io/"
    style="display:inline-flex;align-items:center;gap:.35rem;position:fixed;
           top:.65rem;left:.85rem;z-index:100;font-size:.7rem;
-          letter-spacing:.04em;color:rgba(255,255,255,0.4);
+          letter-spacing:.04em;color:var(--text-dim, rgba(255,255,255,0.4));
           text-decoration:none;transition:color .15s;"
-   onmouseover="this.style.color='currentColor'"
-   onmouseout="this.style.color='rgba(255,255,255,0.4)'">&larr; DaveHomeAssist</a>
+   onmouseover="this.style.color='var(--text, #fff)'"
+   onmouseout="this.style.color='var(--text-dim, rgba(255,255,255,0.4))'">&larr; DaveHomeAssist</a>
 <div class="page">
   <section class="hero">
     <div class="hero-card">

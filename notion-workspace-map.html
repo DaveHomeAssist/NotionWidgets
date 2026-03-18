@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Graph Explorer</title>
+      <link rel="icon" type="image/svg+xml" href="assets/icons/favicon/favicon.svg">
       <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon/favicon-16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/favicon/apple-touch-icon.png" />
@@ -341,11 +342,11 @@
       <select id="layerF"></select>
     </div>
     <div class="seg" id="focusModes"></div>
-    <button class="icon-btn" id="themeBtn">Theme</button>
-    <button class="icon-btn" id="heatBtn">🌡 Heatmap</button>
-    <button class="icon-btn" id="pathBtn">⤳ Path</button>
-    <button class="icon-btn" id="fitBtn">⊡ Fit</button>
-    <button class="icon-btn" id="resetBtn">↺ Reset</button>
+    <button class="icon-btn" id="themeBtn" aria-label="Toggle light and dark theme">Theme</button>
+    <button class="icon-btn" id="heatBtn" aria-label="Toggle heatmap overlay" aria-pressed="false">🌡 Heatmap</button>
+    <button class="icon-btn" id="pathBtn" aria-label="Toggle shortest path mode" aria-pressed="false">⤳ Path</button>
+    <button class="icon-btn" id="fitBtn" aria-label="Fit map to viewport">⊡ Fit</button>
+    <button class="icon-btn" id="resetBtn" aria-label="Reset filters and focus">↺ Reset</button>
   </div>
 
   <div class="path-bar" id="pathBar" style="display:none">
@@ -354,7 +355,7 @@
     <span class="path-arrow">→</span>
     <select class="path-target-select" id="pathTargetSelect"><option value="">Select target…</option></select>
     <span class="path-result" id="pathResult"></span>
-    <button class="path-clear" id="pathClear">✕ Clear</button>
+    <button class="path-clear" id="pathClear" aria-label="Clear path mode">✕ Clear</button>
   </div>
 
   <div class="main">
@@ -453,6 +454,9 @@ let adjacency = {};
 let degree = {};
 let maxDegree = 0;
 let currentMapId = null;
+const depsAvailable = typeof window.d3 !== 'undefined' && typeof window.dagre !== 'undefined';
+const FALLBACK_LAYER_COLOR = '#818cf8';
+const FALLBACK_EDGE_STROKE = 'rgba(120,145,190,0.35)';
 
 const state = {
   search: '',
@@ -469,6 +473,69 @@ const state = {
 let pathNodeIds = new Set();
 let pathEdgeKeys = new Set();  // "from→to" keys
 let pathSteps = [];            // ordered node IDs in the path
+
+function getNodeById(id) {
+  return id && Object.prototype.hasOwnProperty.call(nodeMap, id) ? nodeMap[id] : null;
+}
+
+function sanitizeColor(value, fallback) {
+  const raw = String(value || '').trim();
+  if (raw && typeof CSS !== 'undefined' && CSS.supports && CSS.supports('color', raw)) return raw;
+  return fallback;
+}
+
+function sanitizeDasharray(value) {
+  const raw = String(value || '').trim();
+  return /^(\d+(\.\d+)?)([\s,]+(\d+(\.\d+)?))*$/.test(raw) ? raw : '';
+}
+
+function withAlpha(color, alpha, fallback) {
+  const hex = String(color || '').trim().match(/^#([0-9a-f]{6})$/i);
+  if (!hex) return fallback;
+  const channels = hex[1].match(/../g).map(part => parseInt(part, 16));
+  return `rgba(${channels[0]},${channels[1]},${channels[2]},${alpha})`;
+}
+
+function sanitizeUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw, location.href);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function sanitizeLayers(rawLayers) {
+  const next = {};
+  Object.entries(rawLayers || {}).forEach(([name, color]) => {
+    next[name] = sanitizeColor(color, FALLBACK_LAYER_COLOR);
+  });
+  return next;
+}
+
+function sanitizeEdgeStyles(rawStyles) {
+  const next = {};
+  Object.entries(rawStyles || {}).forEach(([name, style]) => {
+    next[name] = {
+      stroke: sanitizeColor(style && style.stroke, FALLBACK_EDGE_STROKE),
+      dasharray: sanitizeDasharray(style && style.dasharray)
+    };
+  });
+  return next;
+}
+
+function sanitizeStateRefs() {
+  if (!getNodeById(state.selectedId)) state.selectedId = nodes[0]?.id || null;
+  if (!getNodeById(state.focusNode)) state.focusNode = null;
+  if (!getNodeById(state.pathTarget) || state.pathTarget === state.selectedId) state.pathTarget = null;
+  if (!state.selectedId) {
+    state.focusNode = null;
+    state.pathMode = false;
+    state.pathTarget = null;
+  }
+}
 
 // ── URL State Sync ───────────────────────────────────────────────────────────
 function readStateFromUrl() {
@@ -575,7 +642,7 @@ function updatePathBar() {
   bar.style.display = 'flex';
 
   // Source chip
-  const srcNode = state.selectedId ? nodeMap[state.selectedId] : null;
+  const srcNode = getNodeById(state.selectedId);
   sourceEl.textContent = srcNode ? srcNode.label : '—';
 
   // Target dropdown — populate with all nodes except source
@@ -633,6 +700,18 @@ function showError(title, errors, warnings) {
   </div>`;
 }
 
+function showDependencyFallback() {
+  showStatus('🧩', 'External scripts blocked', 'This workspace map needs D3 and Dagre. Your Notion or CSP blocked the CDN scripts. Open the page directly or allow cdnjs.cloudflare.com.');
+  const panel = document.getElementById('detailPanel');
+  if (panel) {
+    panel.innerHTML = `<div class="d-card">
+      <div class="d-kicker">Dependency fallback</div>
+      <div class="d-title">Graph engine unavailable</div>
+      <p class="d-desc">The widget loaded, but the layout engine scripts were blocked. The rest of the page is safe to render; the graph canvas is not.</p>
+    </div>`;
+  }
+}
+
 // ── Manifest Loader ──────────────────────────────────────────────────────────
 async function loadManifest() {
   showLoading('Loading map registry…');
@@ -688,8 +767,8 @@ async function loadMapPack(mapId) {
     currentMapId = mapId;
     nodes = dataset.nodes;
     edges = dataset.edges;
-    presentation = pres;
-    layers = pres.layers || {};
+    presentation = Object.assign({}, pres, { edgeStyles: sanitizeEdgeStyles(pres.edgeStyles || {}) });
+    layers = sanitizeLayers(pres.layers || {});
 
     // Build derived indexes
     nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
@@ -722,10 +801,9 @@ async function loadMapPack(mapId) {
       pathMode: false,
       pathTarget: null,
     });
-    document.getElementById('pathBtn').textContent = '⤳ Path';
+    syncToolbarButtons();
 
     document.getElementById('search').value = '';
-    document.getElementById('heatBtn').textContent = defaultHeatmap ? '🌡 Heatmap ON' : '🌡 Heatmap';
     layoutCache = null;
 
     // Apply presentation chrome
@@ -774,7 +852,7 @@ function restoreCanvas() {
   wrap.appendChild(svg);
 
   // Re-bind D3 zoom
-  d3.select(svg).call(zoom);
+  if (zoom) d3.select(svg).call(zoom);
   // Re-bind node keyboard handler
   ng.addEventListener('keydown', handleNodeKeydown);
   ng.onclick = handleNodeClick;
@@ -782,17 +860,43 @@ function restoreCanvas() {
 
 // ── Presentation-driven setup ────────────────────────────────────────────────
 function setupLegend() {
-  document.getElementById('legend').innerHTML = Object.entries(layers).map(([name, col]) =>
-    `<span class="legend-item"><span class="dot" style="background:${col}"></span>${name}</span>`
-  ).join('');
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  Object.entries(layers).forEach(([name, col]) => {
+    const item = document.createElement('span');
+    item.className = 'legend-item';
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = col;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(name));
+    legend.appendChild(item);
+  });
 }
 
 function setupEdgeLegend() {
   const styles = presentation.edgeStyles || {};
-  document.getElementById('edgeLegend').innerHTML = Object.entries(styles).map(([name, s]) => {
-    const dash = s.dasharray ? ` stroke-dasharray="${s.dasharray}"` : '';
-    return `<span class="legend-item"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="${s.stroke}" stroke-width="1.5"${dash}/></svg> ${name}</span>`;
-  }).join('');
+  const legend = document.getElementById('edgeLegend');
+  legend.innerHTML = '';
+  Object.entries(styles).forEach(([name, s]) => {
+    const item = document.createElement('span');
+    item.className = 'legend-item';
+    const swatch = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    swatch.setAttribute('width', '22');
+    swatch.setAttribute('height', '8');
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', '0');
+    line.setAttribute('y1', '4');
+    line.setAttribute('x2', '22');
+    line.setAttribute('y2', '4');
+    line.setAttribute('stroke', s.stroke);
+    line.setAttribute('stroke-width', '1.5');
+    if (s.dasharray) line.setAttribute('stroke-dasharray', s.dasharray);
+    swatch.appendChild(line);
+    item.appendChild(swatch);
+    item.appendChild(document.createTextNode(' ' + name));
+    legend.appendChild(item);
+  });
 }
 
 function setupMarkers() {
@@ -831,7 +935,23 @@ function getInitialTheme() {
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   const btn = document.getElementById('themeBtn');
-  if (btn) btn.textContent = theme === 'light' ? '☀ Light' : '🌙 Dark';
+  if (btn) {
+    btn.textContent = theme === 'light' ? '☀ Light' : '🌙 Dark';
+    btn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+  }
+}
+
+function syncToolbarButtons() {
+  const heatBtn = document.getElementById('heatBtn');
+  const pathBtn = document.getElementById('pathBtn');
+  if (heatBtn) {
+    heatBtn.textContent = state.heatmap ? '🌡 Heatmap ON' : '🌡 Heatmap';
+    heatBtn.setAttribute('aria-pressed', state.heatmap ? 'true' : 'false');
+  }
+  if (pathBtn) {
+    pathBtn.textContent = state.pathMode ? '⤳ Path ON' : '⤳ Path';
+    pathBtn.setAttribute('aria-pressed', state.pathMode ? 'true' : 'false');
+  }
 }
 
 // ── Layout ───────────────────────────────────────────────────────────────────
@@ -883,17 +1003,19 @@ function computeLayout(visibleIds) {
 
 // ── D3 Zoom ──────────────────────────────────────────────────────────────────
 const mapWrap = document.getElementById('mapWrap');
+let zoom = null;
+if (depsAvailable) {
+  zoom = d3.zoom().scaleExtent([0.35, 6]).on('zoom', e => {
+    const zg = document.getElementById('zoomGroup');
+    if (zg) zg.setAttribute('transform', e.transform);
+  });
 
-const zoom = d3.zoom().scaleExtent([0.35, 6]).on('zoom', e => {
-  const zg = document.getElementById('zoomGroup');
-  if (zg) zg.setAttribute('transform', e.transform);
-});
-
-d3.select(document.getElementById('map')).call(zoom);
-mapWrap.addEventListener('mousedown', () => mapWrap.classList.add('panning'));
-window.addEventListener('mouseup', () => mapWrap.classList.remove('panning'));
-window.addEventListener('blur', () => mapWrap.classList.remove('panning'));
-mapWrap.addEventListener('mouseleave', () => mapWrap.classList.remove('panning'));
+  d3.select(document.getElementById('map')).call(zoom);
+  mapWrap.addEventListener('mousedown', () => mapWrap.classList.add('panning'));
+  window.addEventListener('mouseup', () => mapWrap.classList.remove('panning'));
+  window.addEventListener('blur', () => mapWrap.classList.remove('panning'));
+  mapWrap.addEventListener('mouseleave', () => mapWrap.classList.remove('panning'));
+}
 
 function fitToView(w, h) {
   const svgEl = document.getElementById('map');
@@ -909,7 +1031,7 @@ function fitToView(w, h) {
 
   const tx = (ww - w * scale) / 2;
   const ty = (wh - h * scale) / 2;
-  d3.select(svgEl).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+  if (zoom) d3.select(svgEl).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
 }
 
 // ── Filtering ────────────────────────────────────────────────────────────────
@@ -952,6 +1074,7 @@ function renderFocusModes() {
     const b = document.createElement('button');
     b.textContent = m.label;
     if (state.focus === m.id) b.classList.add('active');
+    b.setAttribute('aria-pressed', state.focus === m.id ? 'true' : 'false');
     b.onclick = () => {
       state.focus = m.id;
       state.focusNode = null;
@@ -964,7 +1087,7 @@ function renderFocusModes() {
 
 // ── Render: Stats ────────────────────────────────────────────────────────────
 function renderStats(visIds) {
-  const vis = [...visIds].map(id => nodeMap[id]);
+  const vis = [...visIds].map(id => getNodeById(id)).filter(Boolean);
   const statsConfig = presentation.stats || [{ label: 'Visible', count: 'visible' }];
 
   document.getElementById('heroStats').innerHTML = statsConfig.map(s => {
@@ -986,6 +1109,7 @@ function renderStats(visIds) {
 
 // ── Render: Map ──────────────────────────────────────────────────────────────
 function renderMap(visIds) {
+  sanitizeStateRefs();
   computeLayout(visIds);
   const positions = layoutCache.positions;
   const { offX, offY } = layoutCache;
@@ -1014,7 +1138,7 @@ function renderMap(visIds) {
     const y2 = pt.y - offY;
     const my = (y1 + y2) / 2;
     const active = state.selectedId === from || state.selectedId === to;
-    const style = edgeStyles[type] || { stroke: 'rgba(120,145,190,0.35)' };
+    const style = edgeStyles[type] || { stroke: FALLBACK_EDGE_STROKE };
 
     const isPathEdge = state.pathMode && state.pathTarget && (pathEdgeKeys.has(`${from}→${to}`) || pathEdgeKeys.has(`${to}→${from}`));
     const isPathDim = state.pathMode && state.pathTarget && pathSteps.length > 0 && !isPathEdge;
@@ -1034,7 +1158,7 @@ function renderMap(visIds) {
     if (!pos) return;
     const px = pos.x - offX;
     const py = pos.y - offY;
-    const col = layers[n.layer] || '#818cf8';
+    const col = layers[n.layer] || FALLBACK_LAYER_COLOR;
     const deg = degree[n.id];
     const heat = state.heatmap ? (deg / maxDegree) : 0;
     const heatCol = heat > 0.6 ? '#ef4444' : heat > 0.35 ? '#f59e0b' : '#38bdf8';
@@ -1056,11 +1180,11 @@ function renderMap(visIds) {
       g.setAttribute('aria-label', n.label);
     }
 
-    const selGlow = n.id === state.selectedId ? `filter:drop-shadow(0 0 14px ${col}44)` : '';
+    const selGlow = withAlpha(col, 0.27, 'rgba(129,140,248,0.27)');
     const displayName = n.label.length > 27 ? n.label.slice(0, 26) + '…' : n.label;
     g.innerHTML = `
       <circle class="heat-ring" cx="${NW/2}" cy="${NH/2}" r="${Math.max(NW,NH)*0.6}" stroke="${heatCol}"/>
-      <rect class="bg" width="${NW}" height="${NH}" rx="13" style="${n.id===state.selectedId?`stroke:${col};${selGlow}`:''}"/>
+      <rect class="bg" width="${NW}" height="${NH}" rx="13" style="${n.id===state.selectedId?`stroke:${col};filter:drop-shadow(0 0 14px ${selGlow})`:''}"/>
       <rect class="n-bar" x="13" y="12" width="36" height="5" fill="${col}" opacity="0.85"/>
       <text class="n-type" x="13" y="28" fill="${col}">${esc(n.type)}</text>
       <text class="n-name" x="13" y="48">${esc(displayName)}</text>
@@ -1077,8 +1201,9 @@ function renderMap(visIds) {
     nodeGrp.appendChild(g);
   });
 
+  const focusNode = getNodeById(state.focusNode);
   document.getElementById('canvasTitle').textContent =
-    state.focusNode ? `Focus: ${nodeMap[state.focusNode].label}` :
+    focusNode ? `Focus: ${focusNode.label}` :
     state.focus !== 'All' ? state.focus : (presentation.title || 'Full Topology');
 }
 
@@ -1117,11 +1242,15 @@ function renderDetail(visIds) {
   }
 
   if (!visIds.has(state.selectedId)) state.selectedId = [...visIds][0];
-  const n = nodeMap[state.selectedId];
-  const col = layers[n.layer] || '#818cf8';
+  const n = getNodeById(state.selectedId);
+  if (!n) {
+    panel.innerHTML = `<div class="d-card"><div class="d-kicker">Selection unavailable</div><p class="d-desc">The selected node is missing from this dataset revision. Choose another node from the canvas.</p></div>`;
+    return;
+  }
+  const col = layers[n.layer] || FALLBACK_LAYER_COLOR;
   const meta = n.meta || {};
-  const inbound = edges.filter(e => e.to === n.id).map(e => nodeMap[e.from]).filter(Boolean);
-  const outbound = edges.filter(e => e.from === n.id).map(e => nodeMap[e.to]).filter(Boolean);
+  const inbound = edges.filter(e => e.to === n.id).map(e => getNodeById(e.from)).filter(Boolean);
+  const outbound = edges.filter(e => e.from === n.id).map(e => getNodeById(e.to)).filter(Boolean);
 
   const inspectorCfg = presentation.inspector || {};
   const fields = inspectorCfg.fields || [{ key: 'type', label: 'Type' }, { key: 'layer', label: 'Layer' }];
@@ -1174,15 +1303,16 @@ function renderDetail(visIds) {
 
   // External link
   let linkHtml = '';
-  if (metaLink && meta[metaLink.key]) {
-    linkHtml = `<a class="notion-link" href="${esc(meta[metaLink.key])}" target="_blank" rel="noopener">${esc(metaLink.icon || '↗')} ${esc(metaLink.label || 'Open')}</a>`;
+  const safeLink = metaLink ? sanitizeUrl(meta[metaLink.key]) : '';
+  if (metaLink && safeLink) {
+    linkHtml = `<a class="notion-link" href="${safeLink}" target="_blank" rel="noopener">${esc(metaLink.icon || '↗')} ${esc(metaLink.label || 'Open')}</a>`;
   }
 
   // Impact table
   const impactRows = [...nodes]
     .sort((a, b) => degree[b.id] - degree[a.id])
     .slice(0, 8)
-    .map(nd => `<tr><td style="color:${layers[nd.layer]||'#818cf8'}">${esc(nd.label.length>24?nd.label.slice(0,23)+'…':nd.label)}</td><td class="deg" style="color:${degree[nd.id]/maxDegree>0.6?'#ef4444':degree[nd.id]/maxDegree>0.35?'#f59e0b':'#38bdf8'}">${degree[nd.id]}</td></tr>`)
+    .map(nd => `<tr><td style="color:${layers[nd.layer]||FALLBACK_LAYER_COLOR}">${esc(nd.label.length>24?nd.label.slice(0,23)+'…':nd.label)}</td><td class="deg" style="color:${degree[nd.id]/maxDegree>0.6?'#ef4444':degree[nd.id]/maxDegree>0.35?'#f59e0b':'#38bdf8'}">${degree[nd.id]}</td></tr>`)
     .join('');
 
   panel.innerHTML = `
@@ -1227,7 +1357,7 @@ function renderDetail(visIds) {
       <div class="d-kicker">⤳ Path (${pathSteps.length - 1} hop${pathSteps.length - 1 !== 1 ? 's' : ''})</div>
       <ul class="d-list" style="margin-top:6px">
         ${pathSteps.map((id, i) => {
-          const pn = nodeMap[id];
+          const pn = getNodeById(id);
           const marker = i === 0 ? '●' : i === pathSteps.length - 1 ? '◎' : '→';
           const col = i === 0 ? '#34d399' : i === pathSteps.length - 1 ? '#f59e0b' : '#818cf8';
           return `<li style="color:${col};cursor:pointer" data-path-node="${id}">${marker} ${esc(pn?.label || id)} <span>(${esc(pn?.layer || '')})</span></li>`;
@@ -1268,6 +1398,7 @@ function renderDetail(visIds) {
 
 // ── Render: Orchestrator ─────────────────────────────────────────────────────
 function render(refit = true) {
+  sanitizeStateRefs();
   computePathHighlights();
   updatePathBar();
   renderFocusModes();
@@ -1290,15 +1421,26 @@ function esc(str) {
 
 function populateSelect(id, values) {
   const el = document.getElementById(id);
-  el.innerHTML = ['All', ...new Set(values)].map(v => `<option value="${v}">${v}</option>`).join('');
+  el.innerHTML = '';
+  ['All', ...new Set(values)].forEach(v => {
+    const option = document.createElement('option');
+    option.value = String(v);
+    option.textContent = String(v);
+    el.appendChild(option);
+  });
 }
 
 // ── Map Selector (manifest-driven) ───────────────────────────────────────────
 function setupMapSelector(maps, initialId) {
   const sel = document.getElementById('mapSelect');
-  sel.innerHTML = maps.map(m =>
-    `<option value="${m.id}" title="${esc(m.description || '')}">${esc(m.title)}</option>`
-  ).join('');
+  sel.innerHTML = '';
+  maps.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.id;
+    option.title = String(m.description || '');
+    option.textContent = String(m.title);
+    sel.appendChild(option);
+  });
   sel.value = initialId;
 
   sel.addEventListener('change', async () => {
@@ -1336,7 +1478,7 @@ document.getElementById('layerF').addEventListener('change', e => {
 
 document.getElementById('heatBtn').addEventListener('click', () => {
   state.heatmap = !state.heatmap;
-  document.getElementById('heatBtn').textContent = state.heatmap ? '🌡 Heatmap ON' : '🌡 Heatmap';
+  syncToolbarButtons();
   render(false);
 });
 
@@ -1351,7 +1493,7 @@ document.getElementById('themeBtn').addEventListener('click', () => {
 document.getElementById('pathBtn').addEventListener('click', () => {
   state.pathMode = !state.pathMode;
   if (!state.pathMode) { state.pathTarget = null; }
-  document.getElementById('pathBtn').textContent = state.pathMode ? '⤳ Path ON' : '⤳ Path';
+  syncToolbarButtons();
   render(false);
 });
 
@@ -1363,7 +1505,7 @@ document.getElementById('pathTargetSelect').addEventListener('change', e => {
 document.getElementById('pathClear').addEventListener('click', () => {
   state.pathMode = false;
   state.pathTarget = null;
-  document.getElementById('pathBtn').textContent = '⤳ Path';
+  syncToolbarButtons();
   render(false);
 });
 
@@ -1386,8 +1528,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   });
   document.getElementById('search').value = '';
   document.getElementById('layerF').value = state.layer;
-  document.getElementById('heatBtn').textContent = state.heatmap ? '🌡 Heatmap ON' : '🌡 Heatmap';
-  document.getElementById('pathBtn').textContent = '⤳ Path';
+  syncToolbarButtons();
   layoutCache = null;
   render();
 });
@@ -1398,6 +1539,10 @@ document.getElementById('nodeGroup').onclick = handleNodeClick;
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 (async function boot() {
+  if (!depsAvailable) {
+    showDependencyFallback();
+    return;
+  }
   const urlState = readStateFromUrl();
 
   // 1. Load manifest
@@ -1417,22 +1562,22 @@ document.getElementById('nodeGroup').onclick = handleNodeClick;
   if (!ok) return;
 
   // 5. Apply URL state overrides
-  if (urlState.node && nodeMap[urlState.node]) state.selectedId = urlState.node;
+  if (urlState.node && getNodeById(urlState.node)) state.selectedId = urlState.node;
   if (urlState.layer) { state.layer = urlState.layer; document.getElementById('layerF').value = urlState.layer; }
   if (urlState.focus) state.focus = urlState.focus;
-  if (urlState.heat === '1') { state.heatmap = true; document.getElementById('heatBtn').textContent = '🌡 Heatmap ON'; }
+  if (urlState.heat === '1') { state.heatmap = true; }
   if (urlState.q) { state.search = urlState.q; document.getElementById('search').value = urlState.q; }
   if (urlState.theme) applyTheme(urlState.theme);
   if (urlState.path) {
     const [src, tgt] = urlState.path.split(',');
-    if (src && tgt && nodeMap[src] && nodeMap[tgt]) {
+    if (src && tgt && getNodeById(src) && getNodeById(tgt)) {
       state.selectedId = src;
       state.pathMode = true;
       state.pathTarget = tgt;
-      document.getElementById('pathBtn').textContent = '⤳ Path ON';
     }
   }
 
+  syncToolbarButtons();
   layoutCache = null;
   render();
 })();
