@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System Map | NotionWidgets</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #131a2e;
+      --panel-2: #18213a;
+      --muted: #8ea0c6;
+      --text: #edf2ff;
+      --line: #2a3558;
+      --accent: #6366f1;
+      --accent-2: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --info: #38bdf8;
+      --shadow: 0 18px 50px rgba(0,0,0,0.28);
+      --radius: 18px;
+      --radius-sm: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; }
+    html, body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #111831 0%, var(--bg) 45%);
+      color: var(--text);
+      min-height: 100%;
+    }
+
+    body { padding: 24px; }
+
+    .page {
+      max-width: 1540px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero, .toolbar, .canvas, .detail {
+      background: rgba(19,26,46,0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      backdrop-filter: blur(10px);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 18px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(99,102,241,0.12);
+      color: #c4b5fd;
+      border: 1px solid rgba(99,102,241,0.28);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1.02;
+    }
+
+    .hero p { color: var(--muted); max-width: 70ch; line-height: 1.55; }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      align-content: start;
+    }
+
+    .stat {
+      background: var(--panel-2);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+
+    .stat-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { margin-top: 8px; font-size: 28px; font-weight: 800; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(240px, 1.2fr) repeat(3, minmax(140px, 180px)) minmax(140px, 180px) minmax(220px, 1fr);
+      gap: 12px;
+      align-items: center;
+    }
+
+    .field, .segmented, .legend, .detail-card {
+      background: var(--panel-2);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-sm);
+    }
+
+    .field { padding: 10px 12px; }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .field select option { background: var(--panel); color: var(--text); }
+
+    .segmented {
+      display: flex;
+      padding: 6px;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .segmented button, .ghost-btn {
+      border: 0;
+      color: var(--muted);
+      background: transparent;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-family: inherit;
+      transition: background 160ms ease, color 160ms ease;
+      white-space: nowrap;
+    }
+
+    .segmented button.active,
+    .segmented button:hover,
+    .ghost-btn:hover {
+      background: rgba(99,102,241,0.16);
+      color: var(--text);
+    }
+
+    .ghost-btn {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--panel-2);
+      color: var(--text);
+      width: 100%;
+    }
+
+    /* ── Main grid ── */
+    .main {
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(320px, 0.85fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .canvas { padding: 14px; }
+
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 6px 14px;
+      flex-wrap: wrap;
+    }
+
+    .canvas-title { font-size: 18px; font-weight: 800; }
+
+    .legend {
+      display: flex;
+      gap: 10px;
+      padding: 10px 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .map-wrap {
+      border-radius: var(--radius);
+      overflow: auto;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      max-height: 80vh;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 1440px;
+      height: auto;
+      display: block;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(99,102,241,0.10), transparent 28%),
+        radial-gradient(circle at 80% 10%, rgba(34,197,94,0.07), transparent 28%),
+        radial-gradient(circle at 50% 85%, rgba(245,158,11,0.05), transparent 28%),
+        radial-gradient(circle at 15% 80%, rgba(56,189,248,0.06), transparent 28%),
+        #0b1122;
+    }
+
+    .edge { stroke: rgba(142,160,198,0.28); stroke-width: 1.8; }
+
+    .edge.highlight {
+      stroke: rgba(99,102,241,0.85);
+      stroke-width: 2.8;
+      filter: drop-shadow(0 0 6px rgba(99,102,241,0.3));
+    }
+
+    .node { cursor: pointer; }
+    .node rect.bg {
+      fill: rgba(19,26,46,0.94);
+      stroke: rgba(255,255,255,0.09);
+      stroke-width: 1.2;
+      rx: 18;
+      transition: stroke 160ms ease;
+    }
+
+    .node:hover rect.bg { stroke: rgba(255,255,255,0.2); }
+
+    .node.selected rect.bg {
+      stroke: rgba(99,102,241,0.9);
+      stroke-width: 2.2;
+      filter: drop-shadow(0 0 20px rgba(99,102,241,0.2));
+    }
+
+    .node.dimmed { pointer-events: none; }
+
+    .node text.title { fill: var(--text); font-weight: 800; font-size: 13px; }
+    .node text.meta { fill: var(--muted); font-size: 10.5px; }
+    .node text.badge { font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+
+    /* ── Detail panel ── */
+    .detail {
+      padding: 14px;
+      position: sticky;
+      top: 24px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+    }
+
+    .detail-stack { display: grid; gap: 12px; }
+    .detail-card { padding: 14px; }
+
+    .detail-kicker {
+      color: #c4b5fd;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 800;
+    }
+
+    .detail h2 { margin: 8px 0 10px; font-size: 24px; line-height: 1.1; }
+    .detail p, .detail li { color: var(--muted); line-height: 1.5; font-size: 14px; }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+    .chip {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 14px;
+    }
+
+    .kv:last-child { border-bottom: 0; }
+    .kv .k { color: var(--muted); }
+    .kv .v { color: var(--text); font-weight: 600; }
+
+    .list { margin: 0; padding-left: 18px; }
+    .list li { padding: 2px 0; }
+
+    .muted { color: var(--muted); }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 999px;
+      display: inline-block; margin-right: 6px;
+    }
+
+    .status-live        { background: var(--accent-2); }
+    .status-active      { background: var(--info); }
+    .status-draft       { background: var(--warn); }
+    .status-planning    { background: var(--warn); }
+    .status-placeholder { background: rgba(255,255,255,0.2); }
+
+    .node:focus-visible rect.bg {
+      stroke: var(--accent); stroke-width: 2.5; outline: none;
+    }
+
+    .detail::-webkit-scrollbar { width: 6px; }
+    .detail::-webkit-scrollbar-track { background: transparent; }
+    .detail::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+
+    @media (max-width: 1200px) {
+      .hero, .toolbar, .main { grid-template-columns: 1fr; }
+      .detail { position: static; max-height: none; }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 14px; }
+      .toolbar { grid-template-columns: 1fr; }
+      .hero-stats { grid-template-columns: 1fr 1fr; }
+      .kv { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sr-only" id="selectionAnnouncer" aria-live="polite" aria-atomic="true"></div>
+
+  <main class="page">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">🧩 NotionWidgets · Business System</div>
+        <h1>System Map</h1>
+        <p>
+          Operational view of the NotionWidgets product suite — widgets, Notion template systems,
+          sales channels, backend architecture, and the connections between them.
+        </p>
+      </div>
+      <div class="hero-stats" id="heroStats"></div>
+    </header>
+
+    <section class="toolbar">
+      <div class="field">
+        <label for="search">Search nodes</label>
+        <input id="search" type="text" placeholder="Search by name, tag, layer, or status" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="layerFilter">Layer</label>
+        <select id="layerFilter"></select>
+      </div>
+      <div class="field">
+        <label for="statusFilter">Status</label>
+        <select id="statusFilter"></select>
+      </div>
+      <div class="field">
+        <label for="ownerFilter">Owner</label>
+        <select id="ownerFilter"></select>
+      </div>
+      <button class="ghost-btn" id="resetBtn" type="button">Reset filters</button>
+      <div class="segmented" id="focusModes" role="group" aria-label="Focus mode filters"></div>
+    </section>
+
+    <div class="main">
+      <section class="canvas">
+        <div class="canvas-header">
+          <div class="canvas-title" id="canvasTitle">Topology View</div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="map-wrap">
+          <svg id="map" viewBox="0 0 1440 900" role="img" aria-label="NotionWidgets system map"></svg>
+        </div>
+      </section>
+
+      <aside class="detail">
+        <div class="detail-stack" id="detailPanel"></div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    /* ──────────────────────────────────────────
+       Layers & status colours
+       ────────────────────────────────────────── */
+    const layers = {
+      Widget:   '#6366f1',   // indigo — core deliverables
+      Template: '#a855f7',   // purple — Notion template systems
+      Sales:    '#22c55e',   // green — sales channels
+      Backend:  '#38bdf8',   // sky — future backend infra
+      Config:   '#f59e0b',   // amber — configuration / params
+      People:   '#ec4899',   // pink — users & buyers
+      Hosting:  '#ef4444',   // red — deploy infra
+    };
+
+    const statusColors = {
+      Live:      '#22c55e',
+      Active:    '#38bdf8',
+      Draft:     '#f59e0b',
+      Planning:  '#f59e0b',
+      Backlog:   'rgba(255,255,255,0.25)',
+    };
+
+    /* ──────────────────────────────────────────
+       Node data
+       ────────────────────────────────────────── */
+    const nodes = [
+
+      /* ── Row 1: Widgets (y=60) ── */
+      {
+        id: 'quest-log',
+        name: 'Quest Log',
+        layer: 'Widget',
+        status: 'Live',
+        owner: 'Dave',
+        type: 'Gamification Widget',
+        x: 60, y: 60,
+        description: 'RPG-style gamified task tracker. XP bar, level badge, streak counter with animated fire emoji, quest items with rarity tiers (common → legendary), particle burst effects on interaction.',
+        tags: ['gamification', 'xp', 'rarity', 'animation', 'iframe'],
+        systems: ['quest-log.html', 'URL params: title, class, avatar, level, xp, xpMax, streak, quests, stats'],
+        deploy: 'GitHub Pages: davehomeassist.github.io/NotionWidgets/quest-log.html',
+        risks: ['Legacy colon-delimited format deprecated in v1.2', 'Particle effects may lag on low-end devices'],
+        next: ['Deprecate legacy param format in v1.2', 'Add Achievement Unlock variant', 'Add Habit Streak Calendar']
+      },
+      {
+        id: 'project-status',
+        name: 'Project Status',
+        layer: 'Widget',
+        status: 'Live',
+        owner: 'Dave',
+        type: 'Dashboard Widget',
+        x: 430, y: 60,
+        description: 'Radial SVG progress ring, phase breakdown with animated bars, stats row, status badge. Fully configurable via URL parameters. Accent color theming via CSS variables.',
+        tags: ['dashboard', 'radial', 'progress', 'svg', 'animation'],
+        systems: ['project-status.html', 'URL params: name, client, status, deadline, phases (JSON), stats (JSON), accent'],
+        deploy: 'GitHub Pages: davehomeassist.github.io/NotionWidgets/project-status.html',
+        risks: ['Legacy colon-delimited format deprecated in v1.2', 'Phase JSON array must be URL-encoded'],
+        next: ['Deprecate legacy format', 'Build Multi-Project Overview variant', 'Add Budget Burn Rate variant']
+      },
+      {
+        id: 'client-approval',
+        name: 'Client Approval Hub',
+        layer: 'Widget',
+        status: 'Live',
+        owner: 'Dave',
+        type: 'Collaboration Widget',
+        x: 800, y: 60,
+        description: 'Interactive client-facing deliverable review. Three-option decision buttons (Approve / Revisions / Restart), contextual feedback textarea, activity timeline, success overlay animation. Sends decisions via postMessage.',
+        tags: ['approval', 'client', 'feedback', 'postmessage', 'interactive'],
+        systems: ['client-approval.html', 'URL params: title, subtitle, round, deliverables (JSON), timeline (JSON)'],
+        deploy: 'GitHub Pages: davehomeassist.github.io/NotionWidgets/client-approval.html',
+        risks: ['postMessage insufficient for data persistence — backend required', 'Decision state lost on page reload'],
+        next: ['Add Sign-Off Tracker variant', 'Add Stakeholder Vote variant', 'Build persistent backend (Vercel + Supabase)']
+      },
+      {
+        id: 'portfolio-status',
+        name: 'Portfolio Status',
+        layer: 'Widget',
+        status: 'Active',
+        owner: 'Dave',
+        type: 'Dashboard Widget',
+        x: 1160, y: 60,
+        description: 'Portfolio-level status overview widget. Multi-project summary at a glance. Part of the DASHBOARD family alongside Project Status.',
+        tags: ['portfolio', 'multi-project', 'dashboard', 'iframe'],
+        systems: ['portfolio-status.html'],
+        deploy: 'GitHub Pages: davehomeassist.github.io/NotionWidgets/portfolio-status.html',
+        risks: ['Data freshness — no live Notion data pull yet'],
+        next: ['Add Client Health Score variant', 'Add Sprint Velocity variant']
+      },
+
+      /* ── Row 2: Template Systems (y=240) ── */
+      {
+        id: 'habit-tracker',
+        name: 'Gamified Habit Tracker',
+        layer: 'Template',
+        status: 'Live',
+        owner: 'Dave',
+        type: 'Notion Template',
+        x: 60, y: 240,
+        description: 'Four-database Notion template system. Habits, Player Stats, Quests, Rewards Store. XP formula on Habits: if(Completed, Difficulty × 10, 0). First Tier 1 product — target Gumroad listing.',
+        tags: ['notion', 'gamification', 'template', 'databases', 'tier-1'],
+        systems: ['✅ Habits DB', '🧙 Player Stats DB', '⚔️ Quests DB', '🎁 Rewards Store DB', 'Quest Log widget embed'],
+        deploy: 'Notion workspace — built via MCP',
+        risks: ['Level formula on Player Stats had type error — needs manual fix', 'Rollup-dependent formulas require post-creation setup'],
+        next: ['Fix level formula', 'Record Loom walkthrough', 'Create Gumroad listing ($29–39)', 'List on Notion Marketplace']
+      },
+      {
+        id: 'creative-portal',
+        name: 'Unified Creative Portal',
+        layer: 'Template',
+        status: 'Live',
+        owner: 'Dave',
+        type: 'Notion Template',
+        x: 430, y: 240,
+        description: 'Six-database Notion template system for freelancers and agencies. Clients → Projects → Tasks, Deliverables → Time Log, Feedback. Full two-way relations. Tier 2 product.',
+        tags: ['notion', 'freelance', 'template', 'databases', 'tier-2', 'crm'],
+        systems: ['👥 Clients DB', '📁 Projects DB', '✅ Tasks DB', '📦 Deliverables DB', '⏱️ Time Log DB', '💬 Feedback DB', 'Client Portal page', 'Command Center'],
+        deploy: 'Notion workspace — built via MCP',
+        risks: ['Rollup formulas (% complete, budget burn) not yet added', 'Automations not yet configured'],
+        next: ['Add rollup formulas', 'Set up database automations', 'Create Kanban + Today views', 'Package as Tier 2 ($79–99)']
+      },
+
+      /* ── Row 3: Sales & Hosting (y=430) ── */
+      {
+        id: 'gumroad',
+        name: 'Gumroad',
+        layer: 'Sales',
+        status: 'Planning',
+        owner: 'Dave',
+        type: 'Sales Channel',
+        x: 60, y: 430,
+        description: 'Primary one-time payment storefront. First listing: Gamified Habit Tracker at $29–39. Second planned listing: Unified Creative Portal at $79–99.',
+        tags: ['sales', 'one-time', 'storefront', 'gumroad'],
+        systems: ['Product listing pages', 'Download delivery', 'License key management'],
+        deploy: 'gumroad.com',
+        risks: ['Listing not yet created', 'Need cover art and product descriptions'],
+        next: ['Create Habit Tracker listing', 'Write product description', 'Upload widget + template bundle']
+      },
+      {
+        id: 'notion-marketplace',
+        name: 'Notion Marketplace',
+        layer: 'Sales',
+        status: 'Planning',
+        owner: 'Dave',
+        type: 'Discovery Channel',
+        x: 400, y: 430,
+        description: 'Notion\'s native template marketplace. Primary discovery channel — buyers browse here then purchase through Gumroad or LemonSqueezy.',
+        tags: ['sales', 'discovery', 'notion', 'marketplace'],
+        systems: ['Template preview pages', 'Notion Marketplace listing'],
+        deploy: 'notion.com/templates',
+        risks: ['Requires Notion review/approval process', 'Limited customization of listing page'],
+        next: ['Submit Habit Tracker for listing', 'Create compelling preview database']
+      },
+      {
+        id: 'lemonsqueezy',
+        name: 'LemonSqueezy',
+        layer: 'Sales',
+        status: 'Planning',
+        owner: 'Dave',
+        type: 'Subscription Channel',
+        x: 740, y: 430,
+        description: 'Subscription billing platform for Tier 3 Agency bundle. Handles recurring billing, dunning, and subscriber management.',
+        tags: ['sales', 'subscription', 'recurring', 'tier-3'],
+        systems: ['Subscription product page', 'Webhook events', 'Customer portal'],
+        deploy: 'lemonsqueezy.com',
+        risks: ['Agency bundle product not yet defined', 'Subscription value prop needs development'],
+        next: ['Define Agency bundle contents', 'Set up LemonSqueezy account', 'Create $19/mo listing']
+      },
+      {
+        id: 'github-pages',
+        name: 'GitHub Pages',
+        layer: 'Hosting',
+        status: 'Live',
+        owner: 'Dave',
+        type: 'Widget Host',
+        x: 1080, y: 430,
+        description: 'Free static hosting for all widget HTML files. Zero dependencies, zero runtime cost. Widgets served directly as iframe src URLs to Notion buyers.',
+        tags: ['hosting', 'github', 'static', 'cdn'],
+        systems: ['davehomeassist.github.io/NotionWidgets/', 'index.html (widget directory)', 'All widget HTML files'],
+        deploy: 'github.com/davehomeassist/NotionWidgets',
+        risks: ['GitHub Pages uptime is not SLA-backed', 'Custom domain not yet configured'],
+        next: ['Consider custom domain for brand trust', 'Add service worker for offline caching']
+      },
+
+      /* ── Row 4: Backend & Config (y=630) ── */
+      {
+        id: 'url-params',
+        name: 'URL Param System',
+        layer: 'Config',
+        status: 'Live',
+        owner: 'Dave',
+        type: 'Configuration Layer',
+        x: 60, y: 630,
+        description: 'The buyer\'s entire configuration interface. All widget state is encoded in URL parameters — no server, no API keys, no build step required. JSON arrays for complex data, allowlist validation on all values.',
+        tags: ['configuration', 'url-params', 'json', 'no-server', 'allowlist'],
+        systems: ['parseParam() helper', 'Allowlist validation pattern', 'Legacy colon-delimited fallback (deprecated v1.2)', 'JSON array format (current standard)'],
+        deploy: 'Inline in each widget HTML file',
+        risks: ['URL length limits for very large datasets', 'Legacy format must be removed by v1.2'],
+        next: ['Remove legacy parser in v1.2', 'Document param reference in index.html', 'Add param validation error UI']
+      },
+      {
+        id: 'backend-arch',
+        name: 'Persistent Backend',
+        layer: 'Backend',
+        status: 'Planning',
+        owner: 'Dave',
+        type: 'Future Architecture',
+        x: 400, y: 630,
+        description: 'Planned hybrid backend for data-persistent widgets (starting with Client Approval). Architecture: Notion OAuth → Vercel/Cloudflare Workers serverless proxy → Supabase/Firestore intermediate DB. postMessage alone is insufficient for persistence.',
+        tags: ['backend', 'vercel', 'supabase', 'notion-oauth', 'serverless', 'future'],
+        systems: ['Notion OAuth integration', 'Vercel or Cloudflare Workers proxy', 'Supabase PostgreSQL or Firestore', 'Widget ↔ proxy postMessage protocol'],
+        deploy: 'Vercel (proxy) + Supabase (DB)',
+        risks: ['Architecture research complete — implementation not yet begun', 'OAuth complexity for non-technical buyers', 'Adds cost and maintenance surface'],
+        next: ['Begin Vercel proxy implementation', 'Set up Supabase project', 'Wire Client Approval widget to backend']
+      },
+      {
+        id: 'widget-security',
+        name: 'Security Layer',
+        layer: 'Config',
+        status: 'Live',
+        owner: 'Dave',
+        type: 'Safety Pattern',
+        x: 800, y: 630,
+        description: 'Non-negotiable XSS prevention across all widgets. createElement + textContent instead of innerHTML for all user-supplied data. Allowlist validation before any value is rendered. Dark mode default with prefers-color-scheme light support.',
+        tags: ['security', 'xss', 'allowlist', 'dom', 'safety'],
+        systems: ['Safe DOM insertion pattern (textContent)', 'Allowlist validation (VALID_TOKENS Set)', 'CSS custom properties (no inline style injection)', 'Dark/light mode via prefers-color-scheme'],
+        deploy: 'Inline in each widget HTML file',
+        risks: ['Any future contributor must be briefed on patterns', 'Third-party fonts (Google Fonts) are the only external dependency'],
+        next: ['Document security patterns in README', 'Add automated lint rule for innerHTML usage']
+      },
+      {
+        id: 'buyers',
+        name: 'Buyers & Clients',
+        layer: 'People',
+        status: 'Active',
+        owner: 'Shared',
+        type: 'Customer Layer',
+        x: 1100, y: 630,
+        description: 'NotionWidgets customers. Freelancers, agencies, and productivity enthusiasts who embed widgets in their Notion workspaces. Three buyer personas mapped to three pricing tiers.',
+        tags: ['buyers', 'freelancers', 'agencies', 'notion-users', 'customers'],
+        systems: ['Tier 1: Individual (Habit Tracker buyer)', 'Tier 2: Freelancer/Creative (Creative Portal buyer)', 'Tier 3: Agency (full bundle subscriber)'],
+        deploy: 'N/A',
+        risks: ['Cold audience — no outreach or marketing yet live', 'Notion Marketplace discovery not yet active'],
+        next: ['Execute outreach to Notion template creators', 'Send pitches to productivity YouTubers', 'Follow up with Easlo, Marie Poulin, Thomas Frank']
+      },
+    ];
+
+    /* ──────────────────────────────────────────
+       Edges (connections)
+       ────────────────────────────────────────── */
+    const edges = [
+      // Widgets → GitHub Pages (hosting)
+      ['quest-log',       'github-pages'],
+      ['project-status',  'github-pages'],
+      ['client-approval', 'github-pages'],
+      ['portfolio-status','github-pages'],
+
+      // Widgets → URL Param System (config)
+      ['quest-log',       'url-params'],
+      ['project-status',  'url-params'],
+      ['client-approval', 'url-params'],
+      ['portfolio-status','url-params'],
+
+      // Widgets → Security Layer
+      ['quest-log',       'widget-security'],
+      ['project-status',  'widget-security'],
+      ['client-approval', 'widget-security'],
+
+      // Client Approval → Backend (planned)
+      ['client-approval', 'backend-arch'],
+
+      // Templates embed widgets
+      ['habit-tracker',   'quest-log'],
+      ['creative-portal', 'project-status'],
+      ['creative-portal', 'client-approval'],
+
+      // Templates → Sales channels
+      ['habit-tracker',   'gumroad'],
+      ['habit-tracker',   'notion-marketplace'],
+      ['creative-portal', 'gumroad'],
+      ['creative-portal', 'notion-marketplace'],
+      ['creative-portal', 'lemonsqueezy'],
+
+      // Sales → Buyers
+      ['gumroad',           'buyers'],
+      ['notion-marketplace','buyers'],
+      ['lemonsqueezy',      'buyers'],
+
+      // Buyers use widgets (via Notion embeds)
+      ['buyers',          'github-pages'],
+
+      // Backend → Buyers (future persistent data flow)
+      ['backend-arch',    'buyers'],
+    ];
+
+    /* ──────────────────────────────────────────
+       State
+       ────────────────────────────────────────── */
+    const state = {
+      search: '',
+      layer: 'All',
+      status: 'All',
+      owner: 'All',
+      focus: 'All',
+      selectedId: 'quest-log',
+      lastAnnouncedSelection: null
+    };
+
+    /* ──────────────────────────────────────────
+       DOM refs
+       ────────────────────────────────────────── */
+    const $ = (id) => document.getElementById(id);
+    const mapEl        = $('map');
+    const detailPanel  = $('detailPanel');
+    const heroStats    = $('heroStats');
+    const layerFilter  = $('layerFilter');
+    const statusFilter = $('statusFilter');
+    const ownerFilter  = $('ownerFilter');
+    const focusModes   = $('focusModes');
+    const legendEl     = $('legend');
+    const canvasTitle  = $('canvasTitle');
+    const announcer    = $('selectionAnnouncer');
+
+    const unique = (items) => ['All', ...new Set(items)];
+
+    function esc(str) {
+      const el = document.createElement('span');
+      el.textContent = str;
+      return el.innerHTML;
+    }
+
+    function populateSelect(select, values) {
+      select.innerHTML = '';
+      for (const v of values) {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        select.appendChild(opt);
+      }
+    }
+
+    /* ──────────────────────────────────────────
+       Render
+       ────────────────────────────────────────── */
+    function renderLegend() {
+      legendEl.innerHTML = '';
+      for (const [name, color] of Object.entries(layers)) {
+        const span = document.createElement('span');
+        span.className = 'legend-item';
+        span.innerHTML = `<span class="dot" style="background:${color}"></span>`;
+        span.appendChild(document.createTextNode(name));
+        legendEl.appendChild(span);
+      }
+    }
+
+    function renderFocusModes() {
+      const modes = ['All', 'Widgets Only', 'Sales Path', 'Template Systems', 'Future Arch'];
+      focusModes.innerHTML = '';
+      for (const mode of modes) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = mode;
+        btn.setAttribute('aria-pressed', state.focus === mode ? 'true' : 'false');
+        if (state.focus === mode) btn.classList.add('active');
+        btn.addEventListener('click', () => { state.focus = mode; render(); });
+        focusModes.appendChild(btn);
+      }
+    }
+
+    function filteredNodes() {
+      return nodes.filter(node => {
+        const hay = [node.name, node.owner, node.layer, node.type, ...node.tags].join(' ').toLowerCase();
+        if (state.search && !hay.includes(state.search.toLowerCase())) return false;
+        if (state.layer !== 'All' && node.layer !== state.layer) return false;
+        if (state.status !== 'All' && node.status !== state.status) return false;
+        if (state.owner !== 'All' && node.owner !== state.owner) return false;
+
+        switch (state.focus) {
+          case 'Widgets Only':      return ['Widget', 'Config', 'Hosting'].includes(node.layer);
+          case 'Sales Path':        return ['Sales', 'Template', 'People', 'Widget'].includes(node.layer);
+          case 'Template Systems':  return ['Template', 'Widget', 'Sales'].includes(node.layer);
+          case 'Future Arch':       return ['Backend', 'Widget', 'Hosting'].includes(node.layer);
+          default:                  return true;
+        }
+      });
+    }
+
+    function renderHeroStats(visible) {
+      const counts = [
+        ['Visible nodes',   visible.length],
+        ['Live / Active',   visible.filter(n => n.status === 'Live' || n.status === 'Active').length],
+        ['In planning',     visible.filter(n => n.status === 'Planning' || n.status === 'Draft').length],
+        ['Widgets live',    nodes.filter(n => n.layer === 'Widget' && n.status === 'Live').length]
+      ];
+      heroStats.innerHTML = '';
+      for (const [label, value] of counts) {
+        const div = document.createElement('div');
+        div.className = 'stat';
+        div.innerHTML = `<div class="stat-label">${esc(label)}</div><div class="stat-value">${value}</div>`;
+        heroStats.appendChild(div);
+      }
+    }
+
+    const NODE_W = 250;
+    const NODE_H = 100;
+
+    function renderMap(visible) {
+      const visibleIds = new Set(visible.map(n => n.id));
+      const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
+      const frag = [];
+
+      frag.push(`
+        <defs>
+          <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+            <path d="M 32 0 L 0 0 0 32" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+          </pattern>
+        </defs>
+        <rect width="1440" height="900" fill="url(#grid)"></rect>
+      `);
+
+      // Row labels
+      const rowLabels = [
+        { y: 40, label: '🧩 WIDGETS' },
+        { y: 220, label: '📋 TEMPLATE SYSTEMS' },
+        { y: 410, label: '🛒 SALES & HOSTING' },
+        { y: 610, label: '⚙️ CONFIG & BACKEND' },
+      ];
+      for (const {y, label} of rowLabels) {
+        frag.push(`<text x="20" y="${y}" fill="rgba(142,160,198,0.35)" font-size="10" font-weight="800" letter-spacing="0.08em" font-family="Inter, sans-serif">${esc(label)}</text>`);
+      }
+
+      // Edges
+      for (const [a, b] of edges) {
+        const na = nodeById[a], nb = nodeById[b];
+        if (!na || !nb) continue;
+        const show = visibleIds.has(a) && visibleIds.has(b);
+        const highlight = show && state.selectedId && (a === state.selectedId || b === state.selectedId);
+        const x1 = na.x + NODE_W / 2, y1 = na.y + NODE_H / 2;
+        const x2 = nb.x + NODE_W / 2, y2 = nb.y + NODE_H / 2;
+        const mx = (x1 + x2) / 2;
+        frag.push(`<path class="edge${highlight ? ' highlight' : ''}" d="M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}" fill="none" style="opacity:${show ? (highlight ? 1 : 0.45) : 0.06}" />`);
+      }
+
+      // Nodes
+      for (const node of nodes) {
+        const vis = visibleIds.has(node.id);
+        const color = layers[node.layer] || '#6366f1';
+        const sel = node.id === state.selectedId ? 'selected' : '';
+        const dimmed = vis ? '' : 'dimmed';
+        const opacity = vis ? 1 : 0.12;
+        frag.push(`
+          <g class="node ${sel} ${dimmed}" data-id="${esc(node.id)}" data-interactive="${vis ? 'true' : 'false'}" transform="translate(${node.x}, ${node.y})" style="opacity:${opacity}" tabindex="${vis ? 0 : -1}" ${vis ? `role="button" aria-label="${esc(node.name)}"` : 'aria-hidden="true"'}>
+            <rect class="bg" width="${NODE_W}" height="${NODE_H}" rx="16"></rect>
+            <rect x="14" y="14" width="54" height="7" rx="999" fill="${color}" opacity="0.9"></rect>
+            <text class="title" x="14" y="41">${esc(node.name)}</text>
+            <text class="meta" x="14" y="58">${esc(node.type)}</text>
+            <text class="meta badge" x="14" y="78" fill="${color}">${esc(node.layer)} · ${esc(node.status)}</text>
+          </g>
+        `);
+      }
+
+      mapEl.innerHTML = frag.join('');
+
+      canvasTitle.textContent = visible.length
+        ? (state.focus === 'All' ? 'Topology View' : `${state.focus}`)
+        : 'No Matching Nodes';
+    }
+
+    function renderDetails(visible) {
+      if (!visible.length) {
+        detailPanel.innerHTML = `
+          <div class="detail-card">
+            <div class="detail-kicker">No results</div>
+            <h2>No nodes match</h2>
+            <p>Clear or adjust filters to restore the system map.</p>
+          </div>`;
+        return;
+      }
+
+      const node = visible.find(n => n.id === state.selectedId) || visible[0];
+      state.selectedId = node.id;
+
+      const related = edges
+        .filter(([a, b]) => a === node.id || b === node.id)
+        .map(([a, b]) => a === node.id ? b : a)
+        .map(id => nodes.find(n => n.id === id))
+        .filter(Boolean);
+
+      const statusClass = `status-${node.status.toLowerCase()}`;
+      const listHtml = (items) => items.map(i => `<li>${esc(i)}</li>`).join('');
+      const chipHtml = (items) => items.map(t => `<span class="chip">${esc(t)}</span>`).join('');
+
+      detailPanel.innerHTML = `
+        <div class="detail-card">
+          <div class="detail-kicker">Selected node</div>
+          <h2>${esc(node.name)}</h2>
+          <p>${esc(node.description)}</p>
+          <div class="chip-row">
+            <span class="chip">${esc(node.layer)}</span>
+            <span class="chip"><span class="${statusClass} status-dot"></span>${esc(node.status)}</span>
+            <span class="chip">${esc(node.type)}</span>
+          </div>
+        </div>
+
+        <div class="detail-card">
+          <div class="kv"><div class="k">Layer</div><div class="v">${esc(node.layer)}</div></div>
+          <div class="kv"><div class="k">Status</div><div class="v">${esc(node.status)}</div></div>
+          <div class="kv"><div class="k">Role</div><div class="v">${esc(node.type)}</div></div>
+          ${node.deploy ? `<div class="kv"><div class="k">Deploy</div><div class="v">${esc(node.deploy)}</div></div>` : ''}
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-kicker">Key systems & files</div>
+          <ul class="list">${listHtml(node.systems)}</ul>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-kicker">Tags</div>
+          <div class="chip-row">${chipHtml(node.tags)}</div>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-kicker">Connected nodes</div>
+          <ul class="list">${related.length
+            ? related.map(r => `<li>${esc(r.name)} <span class="muted">(${esc(r.layer)})</span></li>`).join('')
+            : '<li class="muted">No linked systems</li>'
+          }</ul>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-kicker">Risks</div>
+          <ul class="list">${listHtml(node.risks)}</ul>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-kicker">Next moves</div>
+          <ul class="list">${listHtml(node.next)}</ul>
+        </div>
+      `;
+
+      if (state.lastAnnouncedSelection !== node.id) {
+        announcer.textContent = `${node.name} selected`;
+        state.lastAnnouncedSelection = node.id;
+      }
+    }
+
+    /* ──────────────────────────────────────────
+       Main render
+       ────────────────────────────────────────── */
+    function render() {
+      renderFocusModes();
+      const visible = filteredNodes();
+      const visibleIds = new Set(visible.map(n => n.id));
+      if (!visibleIds.has(state.selectedId)) state.selectedId = visible[0]?.id ?? null;
+      renderHeroStats(visible);
+      renderMap(visible);
+      renderDetails(visible);
+    }
+
+    /* ──────────────────────────────────────────
+       Init
+       ────────────────────────────────────────── */
+    populateSelect(layerFilter, unique(nodes.map(n => n.layer)));
+    populateSelect(statusFilter, unique(nodes.map(n => n.status)));
+    populateSelect(ownerFilter, unique(nodes.map(n => n.owner)));
+    renderLegend();
+
+    mapEl.addEventListener('click', (e) => {
+      const node = e.target.closest('.node[data-interactive="true"]');
+      if (!node) return;
+      state.selectedId = node.dataset.id;
+      render();
+    });
+
+    mapEl.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const node = e.target.closest('.node[data-interactive="true"]');
+      if (!node) return;
+      e.preventDefault();
+      state.selectedId = node.dataset.id;
+      render();
+    });
+
+    let searchTimer = null;
+    $('search').addEventListener('input', (e) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        state.search = e.target.value.trim();
+        render();
+      }, 120);
+    });
+    layerFilter.addEventListener('change', (e) => { state.layer = e.target.value; render(); });
+    statusFilter.addEventListener('change', (e) => { state.status = e.target.value; render(); });
+    ownerFilter.addEventListener('change', (e) => { state.owner = e.target.value; render(); });
+
+    $('resetBtn').addEventListener('click', () => {
+      clearTimeout(searchTimer);
+      state.search = '';
+      state.layer = 'All';
+      state.status = 'All';
+      state.owner = 'All';
+      state.focus = 'All';
+      state.selectedId = 'quest-log';
+      $('search').value = '';
+      layerFilter.value = 'All';
+      statusFilter.value = 'All';
+      ownerFilter.value = 'All';
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
