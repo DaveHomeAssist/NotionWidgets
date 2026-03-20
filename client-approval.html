@@ -244,19 +244,19 @@
 
   .action-btn:hover { transform: translateY(-2px); }
 
-  .action-btn.approve-btn:hover, .action-btn.approve-btn.selected {
+  .action-btn.approve-btn:hover, .action-btn.approve-btn.is-selected {
     border-color: var(--approve);
     background: var(--approve-bg);
     box-shadow: 0 0 20px var(--approve-glow);
   }
 
-  .action-btn.revise-btn:hover, .action-btn.revise-btn.selected {
+  .action-btn.revise-btn:hover, .action-btn.revise-btn.is-selected {
     border-color: var(--revise);
     background: var(--revise-bg);
     box-shadow: 0 0 20px var(--revise-glow);
   }
 
-  .action-btn.restart-btn:hover, .action-btn.restart-btn.selected {
+  .action-btn.restart-btn:hover, .action-btn.restart-btn.is-selected {
     border-color: var(--restart);
     background: var(--restart-bg);
     box-shadow: 0 0 20px var(--restart-glow);
@@ -277,7 +277,7 @@
     display: none;
   }
 
-  .feedback-section.visible { display: block; }
+  .feedback-section.is-visible { display: block; }
 
   .feedback-area {
     width: 100%;
@@ -314,7 +314,7 @@
     display: none;
   }
 
-  .submit-row.visible { display: flex; }
+  .submit-row.is-visible { display: flex; }
 
   .submit-btn {
     flex: 1;
@@ -399,7 +399,7 @@
     animation: overlay-in 0.4s ease;
   }
 
-  .success-overlay.visible { display: flex; }
+  .success-overlay.is-visible { display: flex; }
 
   @keyframes overlay-in {
     from { opacity: 0; }
@@ -442,7 +442,7 @@
     font-family: var(--font-mono);
   }
 
-  .error-bar.visible { display: flex; }
+  .error-bar.is-visible { display: flex; }
 </style>
 </head>
 <body>
@@ -669,13 +669,13 @@
 
   btns.forEach(btn => {
     btn.addEventListener('click', () => {
-      btns.forEach(b => b.classList.remove('selected'));
+      btns.forEach(b => b.classList.remove('is-selected'));
       btns.forEach(b => b.setAttribute('aria-pressed', 'false'));
-      btn.classList.add('selected');
+      btn.classList.add('is-selected');
       btn.setAttribute('aria-pressed', 'true');
       selectedAction = btn.dataset.action;
-      feedbackSection.classList.add('visible');
-      submitRow.classList.add('visible');
+      feedbackSection.classList.add('is-visible');
+      submitRow.classList.add('is-visible');
 
       if (selectedAction === 'approve') {
         feedbackArea.placeholder = 'Optional: Any final notes before sign-off?';
@@ -688,10 +688,10 @@
   });
 
   function resetInteractionState() {
-    btns.forEach(b => b.classList.remove('selected'));
+    btns.forEach(b => b.classList.remove('is-selected'));
     btns.forEach(b => b.setAttribute('aria-pressed', 'false'));
-    feedbackSection.classList.remove('visible');
-    submitRow.classList.remove('visible');
+    feedbackSection.classList.remove('is-visible');
+    submitRow.classList.remove('is-visible');
     selectedAction = null;
     feedbackArea.value = '';
     feedbackArea.placeholder = 'Add your feedback, revision notes, or questions...';
@@ -706,8 +706,8 @@
 
   function showError(msg) {
     errorBar.textContent = '⚠ ' + msg;
-    errorBar.classList.add('visible');
-    setTimeout(() => errorBar.classList.remove('visible'), 5000);
+    errorBar.classList.add('is-visible');
+    setTimeout(() => errorBar.classList.remove('is-visible'), 5000);
   }
 
   if (initErrors.length > 0) showError(initErrors[0]);
@@ -782,10 +782,10 @@
     document.getElementById('successIcon').textContent = iconMap[selectedAction] || '✅';
     document.getElementById('successText').textContent = textMap[selectedAction] || 'Response Sent';
     document.getElementById('successSub').textContent = subMap[selectedAction] || 'Your response has been sent';
-    overlay.classList.add('visible');
+    overlay.classList.add('is-visible');
 
     setTimeout(() => {
-      overlay.classList.remove('visible');
+      overlay.classList.remove('is-visible');
       resetInteractionState();
       setSubmitPending(false);
     }, 2500);

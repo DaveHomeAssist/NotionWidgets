@@ -79,7 +79,7 @@
       border: 0; background: transparent; color: var(--muted); padding: 6px 11px; border-radius: 7px;
       cursor: pointer; font-size: 11.5px; font-weight: 700; font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: all 130ms;
     }
-    .seg button.active, .seg button:hover { background: rgba(129,140,248,0.14); color: var(--text); }
+    .seg button.is-active, .seg button:hover { background: rgba(129,140,248,0.14); color: var(--text); }
 
     .icon-btn {
       background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -121,7 +121,7 @@
     .edge.structure { stroke: rgba(120,145,190,0.28); }
     .edge.data      { stroke: rgba(52,211,153,0.35); stroke-dasharray: 5,3; }
     .edge.reference { stroke: rgba(251,146,60,0.3); stroke-dasharray: 2,4; }
-    .edge.active    { stroke-width: 2.2 !important; filter: drop-shadow(0 0 4px currentColor); }
+    .edge.is-active    { stroke-width: 2.2 !important; filter: drop-shadow(0 0 4px currentColor); }
 
     /* nodes */
     .node { cursor: pointer; }
@@ -130,7 +130,7 @@
       rx: 13; transition: stroke 140ms, filter 140ms;
     }
     .node:hover .bg { stroke: rgba(255,255,255,0.2); }
-    .node.selected .bg { stroke-width: 1.8; }
+    .node.is-selected .bg { stroke-width: 1.8; }
     .node.dimmed { opacity: 0.07 !important; pointer-events: none; }
     .node .heat-ring { fill: none; stroke-width: 6; opacity: 0; transition: opacity 300ms; }
     .node.heat-visible .heat-ring { opacity: 0.18; }
@@ -576,7 +576,7 @@ function renderFocusModes() {
   modes.forEach(m => {
     const b = document.createElement('button');
     b.textContent = m;
-    if (state.focus === m) b.classList.add('active');
+    if (state.focus === m) b.classList.add('is-active');
     b.onclick = () => { state.focus = m; state.focusNode = null; layoutCache = null; render(); };
     el.appendChild(b);
   });
@@ -618,7 +618,7 @@ function renderMap(visIds) {
     const colMap = { structure: 'rgba(120,145,190,0.35)', data: 'rgba(52,211,153,0.45)', reference: 'rgba(251,146,60,0.4)' };
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${x1} ${y1} C${x1} ${my},${x2} ${my},${x2} ${y2}`);
-    path.setAttribute('class', `edge ${type}${active ? ' active' : ''}`);
+    path.setAttribute('class', `edge ${type}${active ? ' is-active' : ''}`);
     path.setAttribute('stroke', colMap[type]);
     path.setAttribute('marker-end', type === 'data' ? 'url(#arr-data)' : 'url(#arr)');
     edgeGrp.appendChild(path);
@@ -636,7 +636,7 @@ function renderMap(visIds) {
     const heatCol = heat > 0.6 ? '#ef4444' : heat > 0.35 ? '#f59e0b' : '#38bdf8';
 
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', `node${n.id === state.selectedId ? ' selected' : ''}${!vis ? ' dimmed' : ''}${state.heatmap ? ' heat-visible' : ''}`);
+    g.setAttribute('class', `node${n.id === state.selectedId ? ' is-selected' : ''}${!vis ? ' dimmed' : ''}${state.heatmap ? ' heat-visible' : ''}`);
     g.setAttribute('data-id', n.id);
     g.setAttribute('transform', `translate(${px},${py})`);
     g.setAttribute('tabindex', vis ? 0 : -1);
