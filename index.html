@@ -413,6 +413,22 @@
     line-height: 1.6;
   }
 
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    position: fixed;
+    top: .65rem;
+    left: .85rem;
+    z-index: 100;
+    font-size: .7rem;
+    letter-spacing: .04em;
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color .15s;
+  }
+  .back-link:hover { color: var(--text); }
+
   @media (max-width: 960px) {
     .hero,
     .info-grid,
@@ -429,13 +445,7 @@
 </style>
 </head>
 <body>
-<a href="https://davehomeassist.github.io/"
-   style="display:inline-flex;align-items:center;gap:.35rem;position:fixed;
-          top:.65rem;left:.85rem;z-index:100;font-size:.7rem;
-          letter-spacing:.04em;color:var(--text-dim, rgba(255,255,255,0.4));
-          text-decoration:none;transition:color .15s;"
-   <!-- HAMMER: inline-handler --> onmouseover="this.style.color='var(--text, #fff)'"
-   onmouseout="this.style.color='var(--text-dim, rgba(255,255,255,0.4))'">&larr; DaveHomeAssist</a>
+<a href="https://davehomeassist.github.io/" class="back-link">&larr; DaveHomeAssist</a>
 <div class="page">
   <section class="hero">
     <div class="hero-card">
