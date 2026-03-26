@@ -1,6 +1,4 @@
-> **DEPRECATED** — This file is superseded by `CLAUDE.md`. Issues, session log, and project metadata now live in CLAUDE.md. This file is retained as a historical archive only.
-
-# AGENTS.md
+# CLAUDE.md
 
 Inherits root rules from `/Users/daverobertson/Desktop/Code/AGENTS.md`.
 
@@ -20,6 +18,11 @@ Collection of embeddable Notion widgets and workspace visualization tools. Inclu
 - Engine directory contains shared logic modules
 - Maps directory contains visualization tools
 - Each widget is fully self-contained and independently deployable
+
+## Documentation Maintenance
+
+- **Issues**: Track in the issue tracker table below
+- **Session log**: Append to `/Users/daverobertson/Desktop/Code/95-docs-personal/today.csv` after each meaningful change
 
 ## Issue Tracker
 
