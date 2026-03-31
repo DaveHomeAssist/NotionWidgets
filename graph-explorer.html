@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Notion Workspace Map</title>
+  <title>Graph Explorer — Interactive Node Map</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -20,12 +20,7 @@
       --radius:  14px;
       --radius-sm: 9px;
 
-      --c-hub:      #818cf8;
-      --c-software: #34d399;
-      --c-database: #38bdf8;
-      --c-page:     #a78bfa;
-      --c-home:     #fb923c;
-      --c-gov:      #facc15;
+      /* Layer colors derived from data at runtime */
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; }
@@ -194,7 +189,7 @@
 
   <header class="hero">
     <div>
-      <div class="eyebrow">🗂 Dave's Notion Workspace · System Map v2</div>
+      <div class="eyebrow">🗂 Graph Explorer · Interactive Node Map</div>
       <h1>Workspace Topology</h1>
       <p>Auto-layout graph of your actual Notion structure. Pan &amp; zoom the canvas. Click any node to inspect — or click again to focus its dependency tree.</p>
     </div>
@@ -264,179 +259,89 @@
 /* ═══════════════════════════════════════════════
    DATA
 ═══════════════════════════════════════════════ */
-const layers = {
-  'Hub':       '#818cf8',
-  'Database':  '#38bdf8',
-  'Page':      '#a78bfa',
-  'Governance':'#facc15',
-};
+/* Derive layer colors from data — assign from a palette */
+const LAYER_PALETTE = ['#818cf8','#38bdf8','#34d399','#fb923c','#facc15','#a78bfa','#f472b6','#94a3b8','#ef4444','#22d3ee'];
+const layers = {};
+[...new Set(nodes.map(n => n.layer))].forEach((name, i) => {
+  layers[name] = LAYER_PALETTE[i % LAYER_PALETTE.length];
+});
 
 const NW = 220, NH = 88;
 
-const nodes = [
-  /* ── Entry ── */
-  { id:'home-dashboard', name:'HOME | Dashboard', layer:'Hub', type:'Top Hub', status:'Active',
-    url:'https://notion.so/f3fe2637a59d402781e3d7ca07bfbc9c',
-    desc:'Primary workspace entry point. The single front door across all life areas.',
-    tags:['top-level','dashboard','navigation'] },
+/* ═══════════════════════════════════════════════
+   DATA — from URL params or demo fallback
+═══════════════════════════════════════════════ */
+const P = new URLSearchParams(window.location.search);
 
-  /* ── Area hubs ── */
-  { id:'tech-ai', name:'03 | Tech & AI', layer:'Hub', type:'Area Hub', status:'Active',
-    url:'https://notion.so/d7ccbff1c1474efbb2d7f1d50501df4d',
-    desc:'Top-level hub for all technology, AI, and software work.',
-    tags:['hub','area','tech'] },
-  { id:'work-career', name:'02 | Work & Career', layer:'Hub', type:'Area Hub', status:'Active',
-    url:'https://notion.so/238255fc8f44808ca62ecb57f86b3787',
-    desc:'Hub for professional work, career development, and business projects.',
-    tags:['hub','area','work'] },
-  { id:'home-family', name:'05 | Home & Family', layer:'Hub', type:'Area Hub', status:'Active',
-    url:'https://notion.so/2ab255fc8f4480708639d2973408f334',
-    desc:'Hub for home improvement, family projects, and household management.',
-    tags:['hub','area','home'] },
-
-  /* ── Sub-hubs ── */
-  { id:'software-dev', name:'Software Development', layer:'Hub', type:'Control Panel', status:'Active',
-    url:'https://notion.so/31f255fc8f44800ba24cfe8811c9b815',
-    desc:'Main control panel for all software projects. Houses linked views of all key DBs: AI Projects, Dev Work, Bugs, Capture, Decisions, Naming, Context.',
-    tags:['control-panel','software','hub'] },
-  { id:'creative-hub', name:'HUB | Creative Projects', layer:'Hub', type:'Sub-Hub', status:'Active',
-    url:'https://notion.so/1f2255fc8f4480f78f3ef9b81c90398f',
-    desc:'Creative project hub. Connected to DB | Creative Projects.',
-    tags:['hub','creative'] },
-  { id:'home-hub', name:'HUB | Home Life', layer:'Hub', type:'Sub-Hub', status:'Active',
-    url:'https://notion.so/c5aaa5b9502d4b118c9cd9f5bec48388',
-    desc:'Home life management hub. Household, family operations, personal projects.',
-    tags:['hub','home','life'] },
-  { id:'hub-technology', name:'HUB | Technology', layer:'Hub', type:'Sub-Hub', status:'Active',
-    url:'https://notion.so/2ab255fc8f448015b092ea87c2f1b3a2',
-    desc:'Technology-specific navigation hub under Tech & AI.',
-    tags:['hub','technology'] },
-  { id:'hub-workshop', name:'HUB | Workshop & Garden', layer:'Hub', type:'Sub-Hub', status:'Active',
-    url:'https://notion.so/2ff255fc8f4480beb091fe023cbfce90',
-    desc:'Hub for workshop, garage, and garden projects.',
-    tags:['hub','workshop','garden'] },
-
-  /* ── Databases ── */
-  { id:'db-ai-projects', name:'DB | AI Projects Tracker', layer:'Database', type:'Database', status:'Active',
-    url:'https://notion.so/78597fcad9b24222b7b8bc9aa2ff83ae',
-    desc:'Canonical product tracker. PromptLab, Garden OS, NotionWidgets. Authoritative "product" object — work items, bugs, and decisions all relate back here.',
-    tags:['database','products','tracker'] },
-  { id:'db-dev-work', name:'DB | Software Development', layer:'Database', type:'Database', status:'Active',
-    url:'https://notion.so/744f9024122e433faca9ac58411a8086',
-    desc:'Execution layer. All dev work items across all software projects. Relations to AI Projects Tracker.',
-    tags:['database','execution','dev-work'] },
-  { id:'db-bugs', name:'DB | Bug & Issue Backlog', layer:'Database', type:'Database', status:'Active',
-    url:'https://notion.so/3a119da939854a7f9ce19ad3a39116a8',
-    desc:'Quality layer. All bugs and issues. Relates to AI Projects Tracker via Product relation.',
-    tags:['database','quality','bugs'] },
-  { id:'db-capture', name:'DB | AI Conversation Capture', layer:'Database', type:'Database', status:'Active',
-    url:'https://notion.so/baf784e9a1e34a7db4dde6e2ca497c97',
-    desc:'Intake layer. AI conversation extracts that yield dev work or decision records.',
-    tags:['database','capture','intake','ai'] },
-  { id:'db-decisions', name:'DB | Technical Decisions Log', layer:'Database', type:'Database', status:'Active',
-    url:'https://notion.so/c9512134df8141fe8f3403536a7fdc4e',
-    desc:'Governance layer. Records all technical decisions (ADRs). Fed by Capture and Dev Work.',
-    tags:['database','governance','decisions'] },
-  { id:'db-naming', name:'DB | Naming Decisions', layer:'Governance', type:'Database', status:'Active',
-    url:'https://notion.so/e81391c8732f4d689a56743063a1fbb7',
-    desc:'Tracks naming decisions and terminology standards across workspace and codebase.',
-    tags:['database','governance','naming'] },
-  { id:'db-context', name:'DB | Context Templates', layer:'Governance', type:'Database', status:'Active',
-    url:'https://notion.so/b1fdd9d38b574bf89e02bda970ae0945',
-    desc:'Library of reusable AI context templates for prompting Claude consistently across projects.',
-    tags:['database','governance','context','prompting'] },
-  { id:'db-projects', name:'DB | Projects', layer:'Database', type:'Database', status:'Active',
-    url:'https://notion.so/1f2255fc8f448128994df83b59539ded',
-    desc:'General subsystems DB (e.g. Embedded Notion Widgets). Separate from AI Projects Tracker which tracks products.',
-    tags:['database','projects','systems'] },
-  { id:'db-creative', name:'DB | Creative Projects', layer:'Database', type:'Database', status:'Active',
-    url:'https://notion.so/5200d1e8d4c54a0699758f8f9b53db8d',
-    desc:'Tracks creative projects (non-software). Lives under HUB | Creative Projects.',
-    tags:['database','creative'] },
-  { id:'db-home', name:'DB | Projects (Robertsons)', layer:'Database', type:'Database', status:'Active',
-    url:'https://notion.so/584a7ccebb0f41e5b046e4e6a1dc0a95',
-    desc:'Home and family projects DB used within HUB | Home Life.',
-    tags:['database','home','family'] },
-
-  /* ── Project pages ── */
-  { id:'sft-promptlab', name:'SFT | PromptLab', layer:'Page', type:'Project Brief', status:'Active',
-    url:'https://notion.so/31f255fc8f44807abbd8d0dd4d62cb89',
-    desc:'Front door for PromptLab. Linked DB views filtered to Prompt Lab, key docs, architecture embed, and archive.',
-    tags:['project','promptlab','brief'] },
-  { id:'sft-garden-os', name:'SFT | Garden OS', layer:'Page', type:'Project Brief', status:'Active',
-    url:'https://notion.so/148fe68675df406b86752dfe086e051a',
-    desc:'Front door for Garden OS (raised bed planner). Linked views, architecture docs, iteration notes.',
-    tags:['project','garden-os','brief'] },
-  { id:'brief-promptlab', name:'BRIEF | PromptLab', layer:'Page', type:'Brief', status:'Active',
-    url:'https://notion.so/323255fc8f4481848e7ff3acffd8ca72',
-    desc:'Structured brief page for PromptLab project. At-a-glance, key docs, operational views, archive.',
-    tags:['brief','promptlab'] },
-  { id:'brief-garden-os', name:'BRIEF | Garden OS', layer:'Page', type:'Brief', status:'Active',
-    url:'https://notion.so/323255fc8f44816f9d9dd6e708f0246c',
-    desc:'Structured brief page for Garden OS. At-a-glance, key docs, operational views.',
-    tags:['brief','garden-os'] },
-  { id:'ia-analysis', name:'DOC | IA Analysis', layer:'Page', type:'Reference Doc', status:'Active',
-    url:'https://notion.so/310255fc8f4480ae99afee6ceb1b5d15',
-    desc:'Workspace Information Architecture Analysis. Reference for consolidation and structural decisions.',
-    tags:['doc','ia','workspace'] },
+const DEMO_NODES = [
+  { id:'api-gateway', name:'API Gateway', layer:'Service', type:'Gateway', status:'Active',
+    desc:'Main entry point for all client traffic. Rate limiting, auth, and routing.',
+    tags:['infrastructure','entry-point'] },
+  { id:'auth-service', name:'Auth Service', layer:'Service', type:'Microservice', status:'Active',
+    desc:'Handles authentication, JWT issuance, and session management.',
+    tags:['auth','security'] },
+  { id:'user-service', name:'User Service', layer:'Service', type:'Microservice', status:'Active',
+    desc:'User profiles, preferences, and account management.',
+    tags:['users','crud'] },
+  { id:'billing-service', name:'Billing Service', layer:'Service', type:'Microservice', status:'Active',
+    desc:'Subscription management, invoicing, and payment processing.',
+    tags:['billing','payments'] },
+  { id:'notification-service', name:'Notification Service', layer:'Service', type:'Microservice', status:'Active',
+    desc:'Email, push, and in-app notification dispatch.',
+    tags:['notifications','messaging'] },
+  { id:'postgres-main', name:'PostgreSQL (Main)', layer:'Database', type:'Database', status:'Active',
+    desc:'Primary relational store for users, accounts, and transactional data.',
+    tags:['database','relational'] },
+  { id:'redis-cache', name:'Redis Cache', layer:'Database', type:'Cache', status:'Active',
+    desc:'Session cache, rate-limit counters, and hot-path query results.',
+    tags:['cache','performance'] },
+  { id:'event-bus', name:'Event Bus', layer:'Infrastructure', type:'Message Queue', status:'Active',
+    desc:'Async event backbone connecting all services. Pub/sub model.',
+    tags:['events','async','backbone'] },
+  { id:'frontend-app', name:'Frontend App', layer:'Client', type:'SPA', status:'Active',
+    desc:'React single-page application. Communicates exclusively through the API gateway.',
+    tags:['frontend','react','client'] },
+  { id:'admin-panel', name:'Admin Panel', layer:'Client', type:'Internal Tool', status:'Active',
+    desc:'Internal admin dashboard for support and ops teams.',
+    tags:['admin','internal'] },
+  { id:'monitoring', name:'Monitoring Stack', layer:'Infrastructure', type:'Observability', status:'Active',
+    desc:'Metrics, logs, and alerting. Grafana + Prometheus + Loki.',
+    tags:['monitoring','observability','alerts'] },
+  { id:'ci-cd', name:'CI/CD Pipeline', layer:'Infrastructure', type:'DevOps', status:'Active',
+    desc:'Build, test, and deploy automation. GitHub Actions + ArgoCD.',
+    tags:['devops','deployment','automation'] },
 ];
 
-/* Edge types: structure | data | reference */
-const edges = [
-  /* HOME → areas */
-  { s:'home-dashboard', t:'tech-ai',       type:'structure' },
-  { s:'home-dashboard', t:'work-career',   type:'structure' },
-  { s:'home-dashboard', t:'home-family',   type:'structure' },
-
-  /* areas → sub-hubs */
-  { s:'tech-ai',      t:'software-dev',  type:'structure' },
-  { s:'tech-ai',      t:'hub-technology',type:'structure' },
-  { s:'work-career',  t:'creative-hub',  type:'structure' },
-  { s:'home-family',  t:'home-hub',      type:'structure' },
-  { s:'home-family',  t:'hub-workshop',  type:'structure' },
-
-  /* Software Dev control panel → DBs (linked views) */
-  { s:'software-dev', t:'db-ai-projects', type:'structure' },
-  { s:'software-dev', t:'db-dev-work',    type:'structure' },
-  { s:'software-dev', t:'db-bugs',        type:'structure' },
-  { s:'software-dev', t:'db-capture',     type:'structure' },
-  { s:'software-dev', t:'db-decisions',   type:'structure' },
-  { s:'software-dev', t:'db-projects',    type:'structure' },
-  { s:'software-dev', t:'db-context',     type:'reference' },
-
-  /* Software Dev → project brief pages */
-  { s:'software-dev', t:'sft-promptlab', type:'structure' },
-  { s:'software-dev', t:'sft-garden-os', type:'structure' },
-
-  /* Data flow: Capture → Dev Work & Decisions */
-  { s:'db-capture',   t:'db-dev-work',   type:'data' },
-  { s:'db-capture',   t:'db-decisions',  type:'data' },
-
-  /* DB relations: work + bugs + decisions → AI Projects (rollups) */
-  { s:'db-dev-work',  t:'db-ai-projects', type:'data' },
-  { s:'db-bugs',      t:'db-ai-projects', type:'data' },
-  { s:'db-decisions', t:'db-ai-projects', type:'data' },
-
-  /* Governance feeds decisions */
-  { s:'db-naming',    t:'db-decisions',  type:'reference' },
-  { s:'db-context',   t:'db-capture',    type:'reference' },
-
-  /* Workshop → Garden OS */
-  { s:'hub-workshop', t:'sft-garden-os', type:'structure' },
-
-  /* Creative hub → DB */
-  { s:'creative-hub', t:'db-creative',   type:'structure' },
-
-  /* Home hub → home DB */
-  { s:'home-hub',     t:'db-home',       type:'structure' },
-
-  /* Brief pages reference project pages */
-  { s:'sft-promptlab', t:'brief-promptlab', type:'reference' },
-  { s:'sft-garden-os', t:'brief-garden-os', type:'reference' },
-
-  /* IA Analysis is a reference doc in Software Dev */
-  { s:'software-dev',  t:'ia-analysis',  type:'reference' },
+const DEMO_EDGES = [
+  { s:'frontend-app', t:'api-gateway', type:'structure' },
+  { s:'admin-panel', t:'api-gateway', type:'structure' },
+  { s:'api-gateway', t:'auth-service', type:'structure' },
+  { s:'api-gateway', t:'user-service', type:'structure' },
+  { s:'api-gateway', t:'billing-service', type:'structure' },
+  { s:'auth-service', t:'redis-cache', type:'data' },
+  { s:'auth-service', t:'postgres-main', type:'data' },
+  { s:'user-service', t:'postgres-main', type:'data' },
+  { s:'billing-service', t:'postgres-main', type:'data' },
+  { s:'user-service', t:'event-bus', type:'data' },
+  { s:'billing-service', t:'event-bus', type:'data' },
+  { s:'event-bus', t:'notification-service', type:'data' },
+  { s:'notification-service', t:'postgres-main', type:'data' },
+  { s:'monitoring', t:'api-gateway', type:'reference' },
+  { s:'monitoring', t:'event-bus', type:'reference' },
+  { s:'ci-cd', t:'api-gateway', type:'reference' },
+  { s:'ci-cd', t:'auth-service', type:'reference' },
+  { s:'ci-cd', t:'user-service', type:'reference' },
 ];
+
+function parseJsonParam(key, fallback) {
+  const raw = P.get(key);
+  if (!raw) return fallback;
+  try { return JSON.parse(raw); }
+  catch { console.warn('Graph Explorer: invalid JSON for "' + key + '", using demo data'); return fallback; }
+}
+
+const nodes = parseJsonParam('nodes', DEMO_NODES);
+const edges = parseJsonParam('edges', DEMO_EDGES);
 
 /* ═══════════════════════════════════════════════
    PRECOMPUTE
@@ -465,7 +370,7 @@ const state = {
   search:     '',
   layer:      'All',
   focus:      'All',
-  selectedId: 'home-dashboard',
+  selectedId: nodes[0]?.id || null,
   focusNode:  null,   // id of node being "focused" (depth-first tree)
   heatmap:    false,
   clickCount: 0,      // double-click to focus
@@ -543,18 +448,28 @@ function fitToView(positions, w, h) {
 /* ═══════════════════════════════════════════════
    FILTER
 ═══════════════════════════════════════════════ */
+/* Derive focus modes from data instead of hardcoding */
+const layerSet = new Set(nodes.map(n => n.layer));
+const focusModes = ['All'];
+layerSet.forEach(l => focusModes.push(l + ' Only'));
+if (edges.some(e => e.type === 'data')) focusModes.push('Data Flow');
+
 function getVisibleIds() {
   let base = nodes.filter(n => {
-    const hay = [n.name, n.layer, n.type, ...n.tags].join(' ').toLowerCase();
+    const hay = [n.name, n.layer, n.type, ...(n.tags || [])].join(' ').toLowerCase();
     if (state.search && !hay.includes(state.search.toLowerCase())) return false;
     if (state.layer !== 'All' && n.layer !== state.layer) return false;
-    switch (state.focus) {
-      case 'Software Stack': return ['software-dev','db-ai-projects','db-dev-work','db-bugs','db-capture','db-decisions','db-naming','db-context','db-projects','sft-promptlab','sft-garden-os','brief-promptlab','brief-garden-os','tech-ai','home-dashboard','ia-analysis'].includes(n.id);
-      case 'Data Flow':      return ['Database','Governance'].includes(n.layer) || n.id === 'software-dev';
-      case 'Hubs Only':      return n.layer === 'Hub';
-      case 'Governance':     return ['db-decisions','db-naming','db-context'].includes(n.id) || n.id === 'software-dev' || n.id === 'ia-analysis';
-      default: return true;
+    if (state.focus === 'All') return true;
+    if (state.focus === 'Data Flow') {
+      const dataNodeIds = new Set();
+      edges.filter(e => e.type === 'data').forEach(e => { dataNodeIds.add(e.s); dataNodeIds.add(e.t); });
+      return dataNodeIds.has(n.id);
     }
+    if (state.focus.endsWith(' Only')) {
+      const targetLayer = state.focus.replace(' Only', '');
+      return n.layer === targetLayer;
+    }
+    return true;
   });
 
   // If a node is focused, restrict to its immediate neighbors + itself
@@ -585,7 +500,7 @@ function renderLegend() {
 }
 
 function renderFocusModes() {
-  const modes = ['All','Software Stack','Data Flow','Hubs Only','Governance'];
+  const modes = focusModes;
   const el = document.getElementById('focusModes');
   el.innerHTML = '';
   modes.forEach(m => {
@@ -602,9 +517,9 @@ function renderStats(visIds) {
   const vis = [...visIds].map(id => nodeMap[id]).filter(Boolean);
   document.getElementById('heroStats').innerHTML = [
     ['Visible',  vis.length],
-    ['Hubs',     vis.filter(n => n.layer === 'Hub').length],
-    ['DBs',      vis.filter(n => n.layer === 'Database' || n.layer === 'Governance').length],
-    ['Pages',    vis.filter(n => n.layer === 'Page').length],
+    ['Layers',   new Set(vis.map(n => n.layer)).size],
+    ['Edges',    edges.filter(e => visIds.has(e.s) && visIds.has(e.t)).length],
+    ['Max Degree', vis.length ? Math.max(...vis.map(n => degree[n.id] || 0)) : 0],
   ].map(([l,v]) => `<div class="stat"><div class="stat-val">${v}</div><div class="stat-lbl">${l}</div></div>`).join('');
 }
 
@@ -835,7 +750,7 @@ document.getElementById('fitBtn').addEventListener('click', () => {
 
 document.getElementById('resetBtn').addEventListener('click', () => {
   clearTimeout(st);
-  Object.assign(state, { search:'', layer:'All', focus:'All', selectedId:'home-dashboard', focusNode:null, heatmap:false });
+  Object.assign(state, { search:'', layer:'All', focus:'All', selectedId: nodes[0]?.id || null, focusNode:null, heatmap:false });
   document.getElementById('search').value = '';
   document.getElementById('layerF').value = 'All';
   document.getElementById('heatBtn').textContent = '🌡 Heatmap';
