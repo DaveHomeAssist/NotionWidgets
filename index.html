@@ -16,6 +16,8 @@
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="NotionWidgets — Embeddable Widgets for Notion" />
     <meta name="twitter:description" content="Drop-in interactive widgets for Notion embeds. Status panels, quest trackers, workspace maps — single HTML files, zero backend, URL-parameter configured." />
+    <meta property="og:image" content="https://davehomeassist.github.io/NotionWidgets/assets/illustrations/notion-widgets.png" />
+    <meta name="twitter:image" content="https://davehomeassist.github.io/NotionWidgets/assets/illustrations/notion-widgets.png" />
 
     <link rel="icon" type="image/svg+xml" href="assets/icons/favicon/favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon/favicon-32.png" />
@@ -518,7 +520,7 @@
   <section>
     <div class="section-header">
       <div>
-        <div class="section-title">What I've built so far</div>
+        <h2 class="section-title">What I've built so far</h2>
         <p class="section-copy">Each widget is live on GitHub Pages. Click through to see it, or grab the example URL to try it in your own Notion setup.</p>
       </div>
     </div>
@@ -526,12 +528,12 @@
     <div class="widget-grid">
       <article class="widget-card approval">
         <div class="widget-top">
-          <div class="icon">👍</div>
+          <div class="icon" role="img" aria-label="Approval">👍</div>
           <span class="chip">Interactive</span>
         </div>
         <div>
           <h3>Client Approval Hub</h3>
-          <p class="widget-copy">Collect approve, revisions, or restart decisions with structured deliverables, a timeline, and a safe <code>postMessage</code> handoff.</p>
+          <p class="widget-copy">Collect approvals, revisions, or restart decisions with structured deliverables, a timeline, and a safe <code>postMessage</code> handoff.</p>
         </div>
         <div class="url-block">
           <span class="code-label">Live URL</span>
@@ -549,7 +551,7 @@
 
       <article class="widget-card quest">
         <div class="widget-top">
-          <div class="icon">⚔️</div>
+          <div class="icon" role="img" aria-label="Quest">⚔️</div>
           <span class="chip">Gamified</span>
         </div>
         <div>
@@ -572,7 +574,7 @@
 
       <article class="widget-card status">
         <div class="widget-top">
-          <div class="icon">📊</div>
+          <div class="icon" role="img" aria-label="Dashboard">📊</div>
           <span class="chip">Dashboard</span>
         </div>
         <div>
@@ -595,7 +597,7 @@
 
       <article class="widget-card map">
         <div class="widget-top">
-          <div class="icon">🗺</div>
+          <div class="icon" role="img" aria-label="Map">🗺</div>
           <span class="chip">Visualization</span>
         </div>
         <div>
@@ -607,7 +609,7 @@
           <code>https://davehomeassist.github.io/NotionWidgets/notion-workspace-map.html</code>
         </div>
         <div class="link-row">
-          <a class="link primary" href="notion-workspace-map.html">Open map</a>
+          <a class="link primary" href="notion-workspace-map-v2.html">Open map</a>
         </div>
       </article>
     </div>
@@ -616,7 +618,7 @@
   <section>
     <div class="section-header">
       <div>
-        <div class="section-title">How to use them</div>
+        <h2 class="section-title">How to use them</h2>
         <p class="section-copy">The whole point is that this stays simple. Three steps, no tooling.</p>
       </div>
     </div>
@@ -642,7 +644,7 @@
 
   <div class="footer">
     Built by Dave Robertson &middot; Philadelphia, PA<br>
-    More details and param docs in <code>README.md</code> on GitHub.
+    More details and param docs in <code><a href="https://github.com/DaveHomeAssist/NotionWidgets/blob/main/README.md">README.md</a></code> on GitHub.
   </div>
 </main>
 </body>

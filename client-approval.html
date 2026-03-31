@@ -55,7 +55,7 @@
     font-family: var(--font-sans);
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    min-height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -444,7 +444,7 @@
 
   .error-bar.is-visible { display: flex; }
 
-  *:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+  *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -581,7 +581,7 @@
   const config = {
     title: P.get('title') || 'Creative Review',
     subtitle: P.get('subtitle') || 'Website Redesign — Homepage',
-    round: P.get('round') || '2',
+    round: Math.max(1, Math.min(99, parseInt(P.get('round'), 10) || 1)),
     deliverables: normalizeDeliverables(parseJsonArrayParam(P.get('deliverables'), DEFAULT_DELIVERABLES, 'deliverables')),
     timeline: normalizeTimeline(parseJsonArrayParam(P.get('timeline'), DEFAULT_TIMELINE, 'timeline'))
   };
@@ -709,7 +709,7 @@
   function showError(msg) {
     errorBar.textContent = '⚠ ' + msg;
     errorBar.classList.add('is-visible');
-    setTimeout(() => errorBar.classList.remove('is-visible'), 5000);
+    setTimeout(() => errorBar.classList.remove('is-visible'), 3000);
   }
 
   if (initErrors.length > 0) showError(initErrors[0]);
@@ -725,9 +725,9 @@
   }
 
   function getSafeTargetOrigin() {
-    const rawTargetOrigin = (P.get('targetOrigin') || '').trim();
-    const raw = rawTargetOrigin || (document.referrer || '').trim();
-    if (!raw || raw === '*') return null;
+    const raw = (P.get('targetOrigin') || '').trim();
+    if (!raw) return null;
+    if (raw === '*') return '*';
 
     try {
       return new URL(raw).origin;
@@ -738,17 +738,20 @@
 
   document.getElementById('submitBtn').addEventListener('click', () => {
     if (!selectedAction || submitBtn.disabled || submitInFlight) return;
+    submitBtn.disabled = true;
 
     const feedback = feedbackArea.value.trim();
     if ((selectedAction === 'revisions' || selectedAction === 'restart') && feedback.length < 10) {
       showError('Please provide at least 10 characters of feedback for this action.');
       feedbackArea.focus();
+      submitBtn.disabled = false;
       return;
     }
 
     const targetOrigin = getSafeTargetOrigin();
     if (!targetOrigin) {
       showError('Missing valid target origin. Add ?targetOrigin=https://your-domain.com');
+      submitBtn.disabled = false;
       return;
     }
 
@@ -790,7 +793,7 @@
       overlay.classList.remove('is-visible');
       resetInteractionState();
       setSubmitPending(false);
-    }, 2500);
+    }, 3000);
   });
 </script>
 </body>

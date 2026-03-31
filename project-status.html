@@ -45,7 +45,7 @@
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    min-height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -348,11 +348,11 @@
     50% { opacity: 0.3; }
   }
 
-  *:focus-visible { outline: 2px solid #7c5cff; outline-offset: 2px; }
+  *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
-<div class="dashboard" id="dashboard">
+<div class="dashboard" id="dashboard" role="main">
   <div class="header">
     <div>
       <div class="project-name" id="projectName">Brand Redesign</div>
@@ -395,9 +395,11 @@
     if (typeof raw !== 'string') return null;
     const s = raw.trim();
     const m3 = s.match(/^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/);
-    if (m3) return '#' + m3[1] + m3[1] + m3[2] + m3[2] + m3[3] + m3[3];
-    if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
-    return null;
+    if (!m3) {
+      if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
+      return null;
+    }
+    return '#' + m3[1] + m3[1] + m3[2] + m3[2] + m3[3] + m3[3];
   }
 
   function parseJsonArrayParam(raw, fallbackParser) {
@@ -419,7 +421,7 @@
       console.warn('project-status-widget: legacy delimited phases format detected. Migrate to JSON params before v1.2.');
       return s.split(',').map(function(p) {
         var parts = p.split(':');
-        return { name: (parts[0] || '').trim(), pct: parseInt(parts[1]) || 0 };
+        return { name: (parts[0] || '').trim(), pct: parseInt(parts[1], 10) || 0 };
       });
     });
   }
@@ -469,8 +471,10 @@
     document.documentElement.style.setProperty('--accent', config.accent);
     // Derive glow: parse hex channels and apply 0.3 alpha
     var m = config.accent.match(/^#(..)(..)(..)$/);
-    var glowColor = 'rgba(' + parseInt(m[1],16) + ',' + parseInt(m[2],16) + ',' + parseInt(m[3],16) + ',0.3)';
-    document.documentElement.style.setProperty('--accent-glow', glowColor);
+    if (m) {
+      var glowColor = 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',0.3)';
+      document.documentElement.style.setProperty('--accent-glow', glowColor);
+    }
   }
 
   // Header
@@ -486,6 +490,7 @@
   };
   const [badgeText, badgeClass] = statusMap[config.status] || statusMap['in-progress'];
   badge.textContent = badgeText;
+  badge.setAttribute('aria-label', 'Project status: ' + badgeText);
   if (badgeClass) badge.classList.add(badgeClass);
 
   // Deadline

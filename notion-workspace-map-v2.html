@@ -477,6 +477,8 @@ const state = {
 let layoutCache = null;
 
 function computeLayout(visibleIds) {
+  if (!window.dagre) { document.body.innerHTML = '<p style="padding:20px;color:#e88;font-family:sans-serif;">Widget requires dagre.js — blocked by Content Security Policy.</p>'; return; }
+
   const key = [...visibleIds].sort().join(',');
   if (layoutCache?.key === key) return layoutCache.positions;
 
@@ -511,6 +513,8 @@ function computeLayout(visibleIds) {
 /* ═══════════════════════════════════════════════
    D3 ZOOM
 ═══════════════════════════════════════════════ */
+if (!window.d3) { document.body.innerHTML = '<p style="padding:20px;color:#e88;font-family:sans-serif;">Widget requires d3.js — blocked by Content Security Policy.</p>'; throw new Error('d3 not loaded'); }
+
 const mapWrap = document.getElementById('mapWrap');
 const svgEl   = document.getElementById('map');
 const zoomGrp = document.getElementById('zoomGroup');
@@ -566,9 +570,18 @@ function getVisibleIds() {
    RENDER
 ═══════════════════════════════════════════════ */
 function renderLegend() {
-  document.getElementById('legend').innerHTML = Object.entries(layers).map(([name, col]) =>
-    `<span class="legend-item"><span class="dot" style="background:${col}"></span>${name}</span>`
-  ).join('');
+  const el = document.getElementById('legend');
+  el.replaceChildren();
+  for (const [name, color] of Object.entries(layers)) {
+    const item = document.createElement('span');
+    item.className = 'legend-item';
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = color;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(name));
+    el.appendChild(item);
+  }
 }
 
 function renderFocusModes() {
@@ -580,12 +593,13 @@ function renderFocusModes() {
     b.textContent = m;
     if (state.focus === m) b.classList.add('is-active');
     b.onclick = () => { state.focus = m; state.focusNode = null; layoutCache = null; render(); };
+    b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b.click(); }});
     el.appendChild(b);
   });
 }
 
 function renderStats(visIds) {
-  const vis = [...visIds].map(id => nodeMap[id]);
+  const vis = [...visIds].map(id => nodeMap[id]).filter(Boolean);
   document.getElementById('heroStats').innerHTML = [
     ['Visible',  vis.length],
     ['Hubs',     vis.filter(n => n.layer === 'Hub').length],
@@ -675,8 +689,9 @@ function renderMap(visIds) {
     render(false); // don't refit on every click
   };
 
+  const focusedNode = state.focusNode ? nodeMap[state.focusNode] : null;
   document.getElementById('canvasTitle').textContent =
-    state.focusNode ? `Focus: ${nodeMap[state.focusNode].name}` :
+    focusedNode ? `Focus: ${focusedNode.name}` :
     state.focus !== 'All' ? state.focus : 'Full Topology';
 }
 
@@ -690,6 +705,7 @@ function renderDetail(visIds) {
 
   if (!visIds.has(state.selectedId)) state.selectedId = [...visIds][0];
   const n = nodeMap[state.selectedId];
+  if (!n) return;
   const col = layers[n.layer] || '#818cf8';
   const nbrs = [...(adjacency[n.id] || [])].map(id => nodeMap[id]).filter(Boolean);
   const inbound  = edges.filter(e => e.t === n.id).map(e => nodeMap[e.s]).filter(Boolean);
@@ -784,15 +800,14 @@ function render(refit = true) {
 /* ═══════════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════════ */
-function esc(str) {
-  const el = document.createElement('span');
-  el.textContent = String(str ?? '');
-  return el.innerHTML;
-}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
 
 function populateSelect(id, values) {
   const el = document.getElementById(id);
-  el.innerHTML = ['All', ...new Set(values)].map(v => `<option value="${v}">${v}</option>`).join('');
+  el.replaceChildren();
+  for (const v of ['All', ...new Set(values)]) {
+    el.appendChild(Object.assign(document.createElement('option'), { value: v, textContent: v }));
+  }
 }
 
 /* ═══════════════════════════════════════════════

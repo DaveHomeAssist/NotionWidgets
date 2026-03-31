@@ -44,7 +44,7 @@
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    min-height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -382,11 +382,11 @@
     font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   }
 
-  *:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+  *:focus-visible { outline: 2px solid var(--xp); outline-offset: 2px; }
 </style>
 </head>
 <body>
-<div class="quest-panel">
+<div class="quest-panel" role="main">
   <div class="particle-container" id="particles"></div>
   <div class="hero-row">
     <div class="avatar" id="avatar">
@@ -464,7 +464,7 @@
       console.warn('quest-log-widget: legacy delimited quests format detected. Migrate to JSON params before v1.2.');
       return s.split(',').map(function(q) {
         var parts = q.split(':');
-        return { name: (parts[0] || '').trim(), xp: parseInt(parts[1]) || 25, rarity: (parts[2] || 'common').trim(), done: parts[3] === '1' };
+        return { name: (parts[0] || '').trim(), xp: parseInt(parts[1], 10) || 25, rarity: (parts[2] || 'common').trim(), done: parts[3] === '1' };
       });
     });
   }
@@ -507,7 +507,7 @@
   var config = {
     title: P.get('title') || 'Project Champion',
     class: P.get('class') || 'Creative Director',
-    avatar: P.get('avatar') || '⚔️',
+    avatar: (P.get('avatar') || '⚔️').slice(0, 2),
     level: clampNumber(parseFiniteInt(P.get('level'), 7), 1, 999),
     xp: clampNumber(parseFiniteInt(P.get('xp'), 340), 0, 999999),
     xpMax: clampNumber(parseFiniteInt(P.get('xpMax'), 500), 1, 999999),
@@ -601,6 +601,7 @@
 
   // Total XP
   var totalXP = config.quests.filter(function(q) { return q.done; }).reduce(function(a, q) { return a + q.xp; }, 0);
+  if (!Number.isFinite(totalXP)) totalXP = 0;
   document.getElementById('totalXP').textContent = totalXP + ' XP earned';
 
   // Spawn particles on load for completed quests
@@ -619,7 +620,9 @@
 
   // Burst particles from streak area on load
   setTimeout(function() {
-    var rect = document.querySelector('.streak-chip').getBoundingClientRect();
+    var chip = document.querySelector('.streak-chip');
+    if (!chip) return;
+    var rect = chip.getBoundingClientRect();
     for (var i = 0; i < 6; i++) {
       (function(idx) {
         setTimeout(function() {

@@ -734,11 +734,7 @@
 
     const unique = (items) => ['All', ...new Set(items)];
 
-    function esc(str) {
-      const el = document.createElement('span');
-      el.textContent = str;
-      return el.innerHTML;
-    }
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
 
     function populateSelect(select, values) {
       select.innerHTML = '';
@@ -758,7 +754,10 @@
       for (const [name, color] of Object.entries(layers)) {
         const span = document.createElement('span');
         span.className = 'legend-item';
-        span.innerHTML = `<span class="dot" style="background:${color}"></span>`;
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = color;
+        span.appendChild(dot);
         span.appendChild(document.createTextNode(name));
         legendEl.appendChild(span);
       }
@@ -774,6 +773,7 @@
         btn.setAttribute('aria-pressed', state.focus === mode ? 'true' : 'false');
         if (state.focus === mode) btn.classList.add('active');
         btn.addEventListener('click', () => { state.focus = mode; render(); });
+        btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }});
         focusModes.appendChild(btn);
       }
     }
