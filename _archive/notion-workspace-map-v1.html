@@ -1181,6 +1181,8 @@ function renderMap(visIds) {
     }
 
     const selGlow = withAlpha(col, 0.27, 'rgba(129,140,248,0.27)');
+    // Null guard: skip nodes with a broken/missing label from a malformed dataset ref
+    if (!n.label) return;
     const displayName = n.label.length > 27 ? n.label.slice(0, 26) + '…' : n.label;
     g.innerHTML = `
       <circle class="heat-ring" cx="${NW/2}" cy="${NH/2}" r="${Math.max(NW,NH)*0.6}" stroke="${heatCol}"/>
@@ -1312,6 +1314,7 @@ function renderDetail(visIds) {
   const impactRows = [...nodes]
     .sort((a, b) => degree[b.id] - degree[a.id])
     .slice(0, 8)
+    .filter(nd => nd.label) // null guard: skip broken dataset refs with no label
     .map(nd => `<tr><td style="color:${layers[nd.layer]||FALLBACK_LAYER_COLOR}">${esc(nd.label.length>24?nd.label.slice(0,23)+'…':nd.label)}</td><td class="deg" style="color:${degree[nd.id]/maxDegree>0.6?'#ef4444':degree[nd.id]/maxDegree>0.35?'#f59e0b':'#38bdf8'}">${degree[nd.id]}</td></tr>`)
     .join('');
 

@@ -737,13 +737,16 @@
   }
 
   document.getElementById('submitBtn').addEventListener('click', () => {
+    // Guard: set submitInFlight immediately to block any concurrent rapid clicks
     if (!selectedAction || submitBtn.disabled || submitInFlight) return;
+    submitInFlight = true;
     submitBtn.disabled = true;
 
     const feedback = feedbackArea.value.trim();
     if ((selectedAction === 'revisions' || selectedAction === 'restart') && feedback.length < 10) {
       showError('Please provide at least 10 characters of feedback for this action.');
       feedbackArea.focus();
+      submitInFlight = false;
       submitBtn.disabled = false;
       return;
     }
@@ -751,6 +754,7 @@
     const targetOrigin = getSafeTargetOrigin();
     if (!targetOrigin) {
       showError('Missing valid target origin. Add ?targetOrigin=https://your-domain.com');
+      submitInFlight = false;
       submitBtn.disabled = false;
       return;
     }
