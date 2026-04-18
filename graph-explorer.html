@@ -642,7 +642,7 @@ function renderDetail(visIds) {
         <span class="chip" style="color:${col};border-color:${col}30">${esc(n.layer)}</span>
         <span class="chip">${esc(n.status)}</span>
       </div>
-      ${n.url ? `<a class="notion-link" href="${esc(n.url)}" target="_blank" rel="noopener">↗ Open in Notion</a>` : ''}
+      ${safeUrl(n.url) ? `<a class="notion-link" href="${esc(safeUrl(n.url))}" target="_blank" rel="noopener noreferrer">↗ Open in Notion</a>` : ''}
       ${state.focusNode !== n.id
         ? `<br/><a class="notion-link" style="color:var(--muted);margin-top:4px" href="#" id="focusLink">⊙ Click node again to focus tree</a>`
         : `<br/><a class="notion-link" style="color:#ef4444;margin-top:4px" href="#" id="unfocusLink">✕ Clear focus</a>`
@@ -716,6 +716,14 @@ function render(refit = true) {
    HELPERS
 ═══════════════════════════════════════════════ */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+const safeUrl = s => {
+  const str = String(s ?? '').trim();
+  if (!str) return '';
+  try {
+    const u = new URL(str, window.location.href);
+    return ['http:', 'https:', 'mailto:'].includes(u.protocol) ? str : '';
+  } catch { return ''; }
+};
 
 function populateSelect(id, values) {
   const el = document.getElementById(id);
