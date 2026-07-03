@@ -600,7 +600,8 @@
     rarityEl.textContent = q.rarity;
     var xpEl = document.createElement('div');
     xpEl.className = 'quest-xp';
-    xpEl.textContent = '+' + q.xp + ' XP';
+    var safeXp = Number.isFinite(q.xp) ? q.xp : 0;
+    xpEl.textContent = '+' + safeXp + ' XP';
     item.appendChild(checkEl);
     item.appendChild(nameEl);
     item.appendChild(rarityEl);
@@ -609,7 +610,10 @@
   });
 
   // Total XP
-  var totalXP = config.quests.filter(function(q) { return q.done; }).reduce(function(a, q) { return a + q.xp; }, 0);
+  var totalXP = config.quests.filter(function(q) { return q.done; }).reduce(function(a, q) {
+    var safeXp = Number.isFinite(q.xp) ? q.xp : 0;
+    return a + safeXp;
+  }, 0);
   if (!Number.isFinite(totalXP)) totalXP = 0;
   document.getElementById('totalXP').textContent = totalXP + ' XP earned';
 
