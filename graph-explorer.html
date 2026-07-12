@@ -583,7 +583,7 @@ function renderMap(visIds) {
       <text class="n-type" x="13" y="28" fill="${col}">${esc(n.type)}</text>
       <text class="n-name" x="13" y="48">${esc(n.name.length>27?n.name.slice(0,26)+'…':n.name)}</text>
       <text class="n-meta" x="13" y="64">${esc(n.layer)} · ${esc(n.status)}</text>
-      <text class="n-meta" x="13" y="78">${n.tags.slice(0,2).map(t=>'#'+t).join('  ')}</text>
+      <text class="n-meta" x="13" y="78">${n.tags.slice(0,2).map(t=>'#'+esc(t)).join('  ')}</text>
       ${state.heatmap ? `<text class="n-degree" x="${NW-12}" y="16" text-anchor="end" fill="${heatCol}">${deg}↔</text>` : ''}
     `;
 
