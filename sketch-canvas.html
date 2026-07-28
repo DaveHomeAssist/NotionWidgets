@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketch Canvas — NotionWidgets</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg:        #0e0f13;
+    --surface:   #171922;
+    --surface-2: #1f222e;
+    --line:      #2b2f3d;
+    --paper:     #14161f;
+    --rule:      #262a37;
+    --text:      #e9ecf4;
+    --muted:     #8b93a7;
+    --accent:    #6ee7b7;
+    --ink:       #e9ecf4;
+    --radius:    16px;
+    --radius-sm: 10px;
+    --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-disp: 'Outfit', var(--font-body);
+    --font-mono: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  :root[data-theme="light"],
+  html:not([data-theme="dark"]) {
+    /* overridden below by the media query when theme=auto */
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg:#f4f5f9; --surface:#ffffff; --surface-2:#eceff6; --line:#dde1eb;
+      --paper:#ffffff; --rule:#e6e9f1; --text:#151823; --muted:#5d6577; --ink:#1a1d29;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg:#f4f5f9; --surface:#ffffff; --surface-2:#eceff6; --line:#dde1eb;
+    --paper:#ffffff; --rule:#e6e9f1; --text:#151823; --muted:#5d6577; --ink:#1a1d29;
+  }
+  :root[data-theme="dark"] {
+    --bg:#0e0f13; --surface:#171922; --surface-2:#1f222e; --line:#2b2f3d;
+    --paper:#14161f; --rule:#262a37; --text:#e9ecf4; --muted:#8b93a7; --ink:#e9ecf4;
+  }
+
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; padding:0; height:100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 12px;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- header ---------- */
+  header { display:flex; align-items:center; gap:8px; min-height:22px; }
+  header h1 {
+    font-family: var(--font-disp); font-weight:700; font-size:15px;
+    margin:0; letter-spacing:-0.01em; flex:1 1 auto;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .pen-badge {
+    flex:none; display:none; align-items:center; gap:5px;
+    font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+    color: var(--accent-text, var(--accent));
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-text, var(--accent)) 32%, transparent);
+    border-radius: 99px; padding: 3px 9px;
+  }
+  .pen-badge.on { display:inline-flex; }
+  .pen-badge i { width:5px; height:5px; border-radius:50%; background:var(--accent-text, var(--accent)); }
+
+  /* ---------- stage ---------- */
+  .stage {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    touch-action: none;               /* fail-safe default; relaxed to pan-y for input=auto in JS */
+    overscroll-behavior: contain;
+    flex: 1 1 auto;
+    min-height: 160px;
+    cursor: crosshair;
+  }
+  .stage canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #ink { z-index:2; }
+  #bg  { z-index:1; }
+
+  .empty {
+    position:absolute; inset:0; z-index:3; display:grid; place-items:center;
+    pointer-events:none; transition:opacity .3s ease;
+    font-family:var(--font-disp); font-size:13px; color:var(--muted); text-align:center; padding:0 24px;
+  }
+  .stage.dirty .empty { opacity:0; }
+
+  .notice {
+    position:absolute; left:10px; right:10px; bottom:10px; z-index:4;
+    background: var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:8px 11px; font-size:11.5px; color:var(--muted); line-height:1.4;
+    display:none;
+  }
+  .notice.on { display:block; }
+
+  /* ---------- toolbar ---------- */
+  .tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+  .swatches { display:flex; gap:6px; align-items:center; flex:0 0 auto; }
+  .sw {
+    width:24px; height:24px; border-radius:50%; border:2px solid transparent;
+    padding:0; cursor:pointer; flex:none; position:relative;
+    box-shadow: 0 0 0 1px var(--line) inset;
+    transition: transform .12s ease;
+  }
+  .sw[aria-pressed="true"] { border-color: var(--text); transform: scale(1.12); }
+
+  .sizes { display:flex; gap:4px; align-items:center; }
+  .sz {
+    width:26px; height:26px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); display:grid; place-items:center; cursor:pointer; padding:0; flex:none;
+  }
+  .sz[aria-pressed="true"] { background:var(--surface-2); border-color:var(--muted); }
+  .sz span { display:block; border-radius:50%; background:currentColor; color:var(--text); }
+
+  .spacer { flex:1 1 auto; min-width:0; }
+
+  .btn {
+    font-family:var(--font-body); font-weight:700; font-size:12px;
+    background:var(--surface); color:var(--text); border:1px solid var(--line);
+    border-radius:var(--radius-sm); padding:7px 10px; cursor:pointer; flex:none;
+    touch-action: manipulation; display:inline-flex; align-items:center; gap:6px;
+  }
+  .tools > .btn:not(.primary) { padding:7px 8px; }
+  .btn:disabled { opacity:.38; cursor:default; }
+  .btn:not(:disabled):active { transform:translateY(1px); }
+  .btn[aria-pressed="true"] { background:var(--surface-2); border-color:var(--muted); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent, #06121a);   /* set in JS from accent luminance */
+  }
+
+  .btn svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+  footer { font-family:var(--font-mono); font-size:10px; color:var(--muted); letter-spacing:.04em; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="title"></h1>
+  <span class="pen-badge" id="penBadge"><i></i>Pencil</span>
+</header>
+
+<div class="stage" id="stage">
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <canvas id="ink" aria-label="Drawing canvas — draw here with an Apple Pencil or mouse"></canvas>
+  <div class="empty" id="empty"></div>
+  <div class="notice" id="notice" role="status" aria-live="polite"></div>
+</div>
+
+<div class="tools">
+  <div class="swatches" id="swatches"></div>
+  <div class="sizes" id="sizes"></div>
+  <button class="btn" id="erase" type="button" aria-pressed="false" aria-label="Eraser" title="Eraser">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21h10M5.5 14.5l4-4 7 7-2.5 2.5H8l-2.5-2.5a2 2 0 0 1 0-3Z"/><path d="M9.5 10.5 15 5a2 2 0 0 1 2.8 0l2.7 2.7a2 2 0 0 1 0 2.8l-4 4"/></svg>
+  </button>
+  <div class="spacer"></div>
+  <button class="btn" id="undo" type="button" disabled aria-label="Undo" title="Undo">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H9"/></svg>
+  </button>
+  <button class="btn" id="redo" type="button" disabled aria-label="Redo" title="Redo">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h6"/></svg>
+  </button>
+  <button class="btn" id="clear" type="button" disabled title="Clear">Clear</button>
+  <button class="btn primary" id="export" type="button" disabled title="Export PNG">Export PNG</button>
+</div>
+
+<footer id="foot"></footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     1. URL PARAMS — allowlisted, clamped, never trusted
+     ============================================================ */
+  var Q = new URLSearchParams(location.search);
+  function raw(k, d) { var v = Q.get(k); return (v === null || v === '') ? d : v; }
+
+  var HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+  var BG_MODES    = { blank:1, grid:1, dots:1, ruled:1 };
+  var INPUT_MODES = { auto:1, pen:1, any:1 };
+  var THEMES      = { auto:1, dark:1, light:1 };
+
+  function clamp(n, lo, hi) { n = Number(n); return isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo; }
+  function clamp01(n) { return clamp(n, 0, 1); }
+  function pickHex(v, fallback) { return (typeof v === 'string' && HEX.test(v.trim())) ? v.trim() : fallback; }
+  function pickToken(v, table, fallback) { return (typeof v === 'string' && table[v]) ? v : fallback; }
+
+  /* The first swatch is "ink" and MUST follow the theme — a white default stroke is
+     invisible on a light page, which is exactly the bug a hardcoded palette causes. */
+  var ACCENTS = ['#6ee7b7', '#60a5fa', '#f472b6', '#fbbf24'];
+  function defaultColors(inkHex) { return [inkHex].concat(ACCENTS); }
+
+  var usingDefaultColors = true;
+  function parseColors(v) {
+    if (!v) return null;
+    var arr = null;
+    try { var p = JSON.parse(v); if (Array.isArray(p)) arr = p; } catch (_) {}
+    if (!arr) return null;
+    var out = [];
+    for (var i = 0; i < arr.length && out.length < 8; i++) {
+      if (typeof arr[i] === 'string' && HEX.test(arr[i].trim())) out.push(arr[i].trim());
+    }
+    return out.length ? out : null;
+  }
+
+  /* ---- colour maths: pick legible text on top of an arbitrary accent ---- */
+  function toRgb(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+  }
+  function relLuminance(hex) {
+    var c = toRgb(hex).map(function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function readableOn(hex) { return relLuminance(hex) > 0.42 ? '#0b1220' : '#ffffff'; }
+
+  function contrastRatio(a, b) {
+    var la = relLuminance(a), lb = relLuminance(b);
+    var hi = Math.max(la, lb), lo = Math.min(la, lb);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  function mixToward(hex, target, t) {
+    var a = toRgb(hex), b = toRgb(target);
+    return '#' + [0, 1, 2].map(function (i) {
+      return ('0' + Math.round(a[i] + (b[i] - a[i]) * t).toString(16)).slice(-2);
+    }).join('');
+  }
+  /* A brand accent chosen for a dark UI is usually too pale to be TEXT on a light one.
+     Walk it toward the far end until it clears 4.5:1 against the page. */
+  function accentText(accentHex, pageHex) {
+    var c = accentHex;
+    var toward = relLuminance(pageHex) > 0.5 ? '#000000' : '#ffffff';
+    for (var i = 0; i < 22 && contrastRatio(c, pageHex) < 4.5; i++) c = mixToward(c, toward, 0.09);
+    return c;
+  }
+
+  function cssVarHex(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    if (HEX.test(v)) return v;
+    var m = v.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+    if (!m) return fallback;
+    return '#' + [1, 2, 3].map(function (i) {
+      return ('0' + Number(m[i]).toString(16)).slice(-2);
+    }).join('');
+  }
+
+  function parseRatio(v) {
+    if (typeof v !== 'string') return 1.5;
+    var m = v.split(':');
+    if (m.length !== 2) return 1.5;
+    var w = Number(m[0]), h = Number(m[1]);
+    if (!isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return 1.5;
+    return clamp(w / h, 0.4, 3);
+  }
+
+  /* Only ever accept http(s) image URLs — blocks javascript: and data: injection. */
+  function safeImageUrl(v) {
+    if (!v) return null;
+    try {
+      var u = new URL(v, location.href);
+      return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : null;
+    } catch (_) { return null; }
+  }
+
+  /* postMessage target must be an explicit http(s) origin — never '*'. Mirrors the
+     hardening applied to client-approval (issue 013): no wildcard broadcast. */
+  function safeOrigin(v) {
+    if (!v) return '';
+    try {
+      var u = new URL(v);
+      return (u.protocol === 'https:' || u.protocol === 'http:') ? u.origin : '';
+    } catch (_) { return ''; }
+  }
+
+  var CFG = {
+    title:   raw('title', 'Sketch'),
+    accent:  pickHex(raw('accent', ''), '#6ee7b7'),
+    bg:      pickToken(raw('bg', 'blank'), BG_MODES, 'blank'),
+    input:   pickToken(raw('input', 'auto'), INPUT_MODES, 'auto'),
+    theme:   pickToken(raw('theme', 'auto'), THEMES, 'auto'),
+    colors:  null,
+    size:    clamp(raw('size', 4), 1, 24),
+    ratio:   parseRatio(raw('ratio', '3:2')),
+    image:   safeImageUrl(raw('image', '')),
+    save:    raw('save', '0') === '1',
+    targetOrigin: safeOrigin(raw('targetOrigin', ''))
+  };
+
+  if (CFG.theme !== 'auto') document.documentElement.setAttribute('data-theme', CFG.theme);
+  document.documentElement.style.setProperty('--accent', CFG.accent);
+  document.documentElement.style.setProperty('--on-accent', readableOn(CFG.accent));
+
+  function syncAccentText() {
+    document.documentElement.style.setProperty(
+      '--accent-text', accentText(CFG.accent, cssVarHex('--bg', '#0e0f13'))
+    );
+  }
+  syncAccentText();
+
+  /* resolve the palette only after the theme is applied, so --ink is correct */
+  var supplied = parseColors(raw('colors', ''));
+  usingDefaultColors = !supplied;
+  CFG.colors = supplied || defaultColors(cssVarHex('--ink', '#e9ecf4'));
+
+  /* textContent only — user data never touches innerHTML */
+  document.getElementById('title').textContent = CFG.title;
+  document.getElementById('empty').textContent = CFG.image
+    ? 'Mark up the image with your Apple Pencil.'
+    : 'Draw here with your Apple Pencil.';
+  document.getElementById('foot').textContent =
+    (CFG.input === 'pen' ? 'PEN ONLY' : CFG.input === 'any' ? 'ANY INPUT' : 'PEN DRAWS · FINGER SCROLLS');
+
+  /* ============================================================
+     2. CANVAS SETUP — two layers so the eraser never eats the paper
+     ============================================================ */
+  var stage  = document.getElementById('stage');
+  var bgCv   = document.getElementById('bg');
+  var inkCv  = document.getElementById('ink');
+  var bgCtx  = bgCv.getContext('2d');
+  var inkCtx = inkCv.getContext('2d');
+  var notice = document.getElementById('notice');
+
+  /* In auto mode a finger must be free to SCROLL the host page — so relax the
+     fail-safe touch-action:none to pan-y. Pen strokes call preventDefault(), so
+     they still draw without scrolling. In pen/any mode we keep scroll suppressed. */
+  if (CFG.input === 'auto') stage.style.touchAction = 'pan-y';
+
+  var DPR = Math.min(window.devicePixelRatio || 1, 3);
+  var W = 0, H = 0;
+
+  var bgImage = null;
+  var bgTainted = false;
+
+  function showNotice(msg) { notice.textContent = msg; notice.classList.add('on'); }
+
+  function sizeStage() {
+    /* Height follows the ratio unless the frame gives us a fixed height to fill. */
+    var avail = stage.parentNode.clientWidth - 24;
+    var w = stage.clientWidth || avail;
+    stage.style.height = Math.round(w / CFG.ratio) + 'px';
+  }
+
+  function resize() {
+    sizeStage();
+    var r = stage.getBoundingClientRect();
+    var nw = Math.max(1, Math.round(r.width  * DPR));
+    var nh = Math.max(1, Math.round(r.height * DPR));
+    if (nw === W && nh === H) return;
+    W = nw; H = nh;
+    [bgCv, inkCv].forEach(function (c) { c.width = W; c.height = H; });
+    drawBackground();
+    redrawInk();
+  }
+
+  /* ---------- background layer ---------- */
+  function drawBackground() {
+    bgCtx.clearRect(0, 0, W, H);
+
+    var cs = getComputedStyle(document.documentElement);
+    var paper = cs.getPropertyValue('--paper').trim() || '#14161f';
+    var rule  = cs.getPropertyValue('--rule').trim()  || '#262a37';
+
+    bgCtx.fillStyle = paper;
+    bgCtx.fillRect(0, 0, W, H);
+
+    if (bgImage) {
+      /* contain-fit, centred */
+      var s = Math.min(W / bgImage.naturalWidth, H / bgImage.naturalHeight);
+      var dw = bgImage.naturalWidth * s, dh = bgImage.naturalHeight * s;
+      bgCtx.drawImage(bgImage, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      return;
+    }
+
+    var step = 22 * DPR;
+    bgCtx.strokeStyle = rule;
+    bgCtx.fillStyle = rule;
+    bgCtx.lineWidth = Math.max(1, DPR * 0.75);
+
+    if (CFG.bg === 'grid') {
+      bgCtx.beginPath();
+      for (var x = step; x < W; x += step) { bgCtx.moveTo(x + 0.5, 0); bgCtx.lineTo(x + 0.5, H); }
+      for (var y = step; y < H; y += step) { bgCtx.moveTo(0, y + 0.5); bgCtx.lineTo(W, y + 0.5); }
+      bgCtx.stroke();
+    } else if (CFG.bg === 'ruled') {
+      bgCtx.beginPath();
+      for (var yr = step; yr < H; yr += step) { bgCtx.moveTo(0, yr + 0.5); bgCtx.lineTo(W, yr + 0.5); }
+      bgCtx.stroke();
+    } else if (CFG.bg === 'dots') {
+      for (var dx = step; dx < W; dx += step) {
+        for (var dy = step; dy < H; dy += step) {
+          bgCtx.beginPath();
+          bgCtx.arc(dx, dy, Math.max(0.8, DPR * 0.9), 0, Math.PI * 2);
+          bgCtx.fill();
+        }
+      }
+    }
+  }
+
+  if (CFG.image) {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () { bgImage = img; drawBackground(); };
+    img.onerror = function () {
+      /* Retry without CORS so the user at least SEES the image — but the canvas
+         becomes tainted and PNG export will throw, so we disable it up front. */
+      var img2 = new Image();
+      img2.onload = function () {
+        bgImage = img2; bgTainted = true; drawBackground();
+        showNotice('This image is served without CORS headers, so the browser blocks PNG export of the marked-up result. Strokes still work — host the image somewhere that sends Access-Control-Allow-Origin to re-enable export.');
+        syncButtons();
+      };
+      img2.onerror = function () { showNotice('Background image could not be loaded.'); };
+      img2.src = CFG.image;
+    };
+    img.src = CFG.image;
+  }
+
+  /* ============================================================
+     3. STROKE MODEL — vectors, normalised 0..1, so it survives
+        resize AND serialises straight to a backend later
+     ============================================================ */
+  var strokes = [];   /* { c:hex, w:fraction-of-width, e:bool, pts:[[x,y,pressure],...] } */
+  var redoStack = [];
+  var active = null;
+
+  var currentColor = CFG.colors[0];
+  var currentSize  = CFG.size;
+  var erasing = false;
+
+  function pressureOf(e) {
+    if (e.pointerType === 'pen') {
+      /* some pens report 0 until they bite; treat that as a light touch, not a no-op */
+      return e.pressure > 0 ? clamp01(e.pressure) : 0.35;
+    }
+    return e.pressure > 0 && e.pressure < 1 ? clamp01(e.pressure) : 0.5;
+  }
+
+  function norm(e, r) {
+    r = r || stage.getBoundingClientRect();
+    return [
+      clamp01((e.clientX - r.left) / Math.max(1, r.width)),
+      clamp01((e.clientY - r.top)  / Math.max(1, r.height))
+    ];
+  }
+
+  function widthAt(s, pressure) {
+    return Math.max(0.6 * DPR, s.w * W * (0.32 + 1.15 * pressure));
+  }
+
+  function segment(ctx, s, a, b) {
+    var p = (a[2] + b[2]) / 2;
+    ctx.save();
+    ctx.globalCompositeOperation = s.e ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = s.e ? 'rgba(0,0,0,1)' : s.c;
+    ctx.lineWidth = widthAt(s, p);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(a[0] * W, a[1] * H);
+    ctx.lineTo(b[0] * W, b[1] * H);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function dot(ctx, s, a) {
+    ctx.save();
+    ctx.globalCompositeOperation = s.e ? 'destination-out' : 'source-over';
+    ctx.fillStyle = s.e ? 'rgba(0,0,0,1)' : s.c;
+    ctx.beginPath();
+    ctx.arc(a[0] * W, a[1] * H, widthAt(s, a[2]) / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function redrawInk() {
+    inkCtx.clearRect(0, 0, W, H);
+    for (var i = 0; i < strokes.length; i++) {
+      var s = strokes[i];
+      if (!s.pts.length) continue;
+      dot(inkCtx, s, s.pts[0]);
+      for (var j = 1; j < s.pts.length; j++) segment(inkCtx, s, s.pts[j - 1], s.pts[j]);
+    }
+    stage.classList.toggle('dirty', strokes.length > 0);
+  }
+
+  /* ============================================================
+     4. INPUT — pen draws, finger scrolls (palm rejection for free)
+     ============================================================ */
+  var penSeen = false;
+  var penBadge = document.getElementById('penBadge');
+
+  function shouldDraw(e) {
+    if (CFG.input === 'any')  return true;
+    if (CFG.input === 'pen')  return e.pointerType === 'pen';
+    /* auto: pen and mouse draw, touch is left alone so the page can scroll */
+    return e.pointerType === 'pen' || e.pointerType === 'mouse';
+  }
+
+  stage.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'pen' && !penSeen) { penSeen = true; penBadge.classList.add('on'); }
+    if (!shouldDraw(e)) return;
+    if (e.button !== undefined && e.button !== 0) return;
+
+    e.preventDefault();
+    try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+
+    var p = norm(e);
+    active = {
+      c: currentColor,
+      w: currentSize / Math.max(1, stage.getBoundingClientRect().width),
+      e: erasing,
+      pts: [[p[0], p[1], pressureOf(e)]]
+    };
+    strokes.push(active);
+    redoStack.length = 0;
+    dot(inkCtx, active, active.pts[0]);
+    stage.classList.add('dirty');
+    syncButtons();
+  }, { passive: false });
+
+  stage.addEventListener('pointermove', function (e) {
+    if (!active) return;
+    e.preventDefault();
+
+    /* the stage doesn't move mid-stroke — read its rect once, not per sample */
+    var rect = stage.getBoundingClientRect();
+    var batch = (typeof e.getCoalescedEvents === 'function') ? e.getCoalescedEvents() : null;
+    if (!batch || !batch.length) batch = [e];
+
+    for (var i = 0; i < batch.length; i++) {
+      var ev = batch[i];
+      var p = norm(ev, rect);
+      var point = [p[0], p[1], pressureOf(ev)];
+      var prev = active.pts[active.pts.length - 1];
+      /* skip zero-length samples — they add cost and nothing else */
+      if (Math.abs(point[0] - prev[0]) * W < 0.4 && Math.abs(point[1] - prev[1]) * H < 0.4) continue;
+      active.pts.push(point);
+      segment(inkCtx, active, prev, point);
+    }
+  }, { passive: false });
+
+  function endStroke() {
+    if (!active) return;
+    if (active.pts.length === 0) strokes.pop();
+    active = null;
+    syncButtons();
+    emit('stroke');
+  }
+  stage.addEventListener('pointerup', endStroke);
+  stage.addEventListener('pointercancel', endStroke);
+  stage.addEventListener('pointerleave', endStroke);
+
+  /* iPadOS: stop the two-finger / edge gestures from hijacking a pen stroke */
+  stage.addEventListener('touchstart',  function (e) { if (CFG.input !== 'auto') e.preventDefault(); }, { passive: false });
+  stage.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+
+  /* ============================================================
+     5. TOOLBAR
+     ============================================================ */
+  var swWrap = document.getElementById('swatches');
+  CFG.colors.forEach(function (hex, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sw';
+    b.style.background = hex;
+    b.setAttribute('aria-label', 'Colour ' + (i + 1));
+    b.setAttribute('aria-pressed', String(i === 0));
+    b.addEventListener('click', function () {
+      currentColor = hex;
+      erasing = false;
+      eraseBtn.setAttribute('aria-pressed', 'false');
+      swWrap.querySelectorAll('.sw').forEach(function (n) { n.setAttribute('aria-pressed', String(n === b)); });
+    });
+    swWrap.appendChild(b);
+  });
+
+  var SIZE_STEPS = [
+    Math.max(1, Math.round(CFG.size * 0.5)),
+    CFG.size,
+    Math.min(24, Math.round(CFG.size * 2.2))
+  ];
+  var szWrap = document.getElementById('sizes');
+  SIZE_STEPS.forEach(function (px, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sz';
+    b.setAttribute('aria-label', px + ' px brush');
+    b.setAttribute('aria-pressed', String(i === 1));
+    var d = document.createElement('span');
+    var visual = Math.max(3, Math.min(14, px));
+    d.style.width = visual + 'px';
+    d.style.height = visual + 'px';
+    b.appendChild(d);
+    b.addEventListener('click', function () {
+      currentSize = px;
+      szWrap.querySelectorAll('.sz').forEach(function (n) { n.setAttribute('aria-pressed', String(n === b)); });
+    });
+    szWrap.appendChild(b);
+  });
+
+  var eraseBtn  = document.getElementById('erase');
+  var undoBtn   = document.getElementById('undo');
+  var redoBtn   = document.getElementById('redo');
+  var clearBtn  = document.getElementById('clear');
+  var exportBtn = document.getElementById('export');
+
+  eraseBtn.addEventListener('click', function () {
+    erasing = !erasing;
+    eraseBtn.setAttribute('aria-pressed', String(erasing));
+    if (erasing) swWrap.querySelectorAll('.sw').forEach(function (n) { n.setAttribute('aria-pressed', 'false'); });
+  });
+
+  undoBtn.addEventListener('click', function () {
+    if (!strokes.length) return;
+    redoStack.push(strokes.pop());
+    redrawInk(); syncButtons(); emit('undo');
+  });
+
+  redoBtn.addEventListener('click', function () {
+    if (!redoStack.length) return;
+    strokes.push(redoStack.pop());
+    redrawInk(); syncButtons(); emit('redo');
+  });
+
+  clearBtn.addEventListener('click', function () {
+    if (!strokes.length) return;
+    redoStack = strokes.slice().reverse();
+    strokes = [];
+    redrawInk(); syncButtons(); emit('clear');
+  });
+
+  function syncButtons() {
+    undoBtn.disabled  = strokes.length === 0;
+    redoBtn.disabled  = redoStack.length === 0;
+    clearBtn.disabled = strokes.length === 0;
+    exportBtn.disabled = strokes.length === 0 || bgTainted;
+  }
+
+  /* ============================================================
+     6. EXPORT — flatten both layers, hand back a real PNG
+     ============================================================ */
+  function flatten() {
+    var out = document.createElement('canvas');
+    out.width = W; out.height = H;
+    var c = out.getContext('2d');
+    c.drawImage(bgCv, 0, 0);
+    c.drawImage(inkCv, 0, 0);
+    return out;
+  }
+
+  function fileName() {
+    var base = (CFG.title || 'sketch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return (base || 'sketch') + '.png';
+  }
+
+  function flash(btn, msg) {
+    var old = btn.dataset.label || btn.textContent;
+    btn.dataset.label = old;
+    btn.textContent = msg;
+    setTimeout(function () { btn.textContent = btn.dataset.label; }, 1700);
+  }
+
+  function blobFrom(canvas) {
+    return new Promise(function (resolve, reject) {
+      canvas.toBlob(function (b) { b ? resolve(b) : reject(new Error('toBlob returned null')); }, 'image/png');
+    });
+  }
+
+  exportBtn.addEventListener('click', function () {
+    var btn = this;
+    var out;
+    try { out = flatten(); } catch (err) { flash(btn, 'Blocked'); return; }
+
+    var blobP = blobFrom(out);
+
+    /* Safari/WKWebView (the Notion iPad app) requires the ClipboardItem to be
+       constructed synchronously inside the click gesture, with a Blob PROMISE as
+       its value — building it after an async toBlob callback loses the user
+       activation and throws NotAllowedError. So construct it here, now. */
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      var item = null;
+      try { item = new ClipboardItem({ 'image/png': blobP }); } catch (_) { item = null; }
+      if (item) {
+        navigator.clipboard.write([item]).then(function () {
+          flash(btn, 'Copied ✓');
+          blobP.then(function (b) { emit('export', b); });
+        }, function () {
+          blobP.then(function (b) { download(b, btn); emit('export', b); },
+                     function () { flash(btn, 'Failed'); });
+        });
+        return;
+      }
+    }
+
+    blobP.then(function (b) { download(b, btn); emit('export', b); },
+               function () { flash(btn, 'Failed'); });
+  });
+
+  function download(blob, btn) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fileName();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    flash(btn, 'Saved ✓');
+  }
+
+  /* ============================================================
+     7. postMessage — the hook a backend picks up later
+        Opt-in only (save=1) AND to an explicit origin — never a wildcard.
+     ============================================================ */
+  function emit(action, blob) {
+    if (!CFG.save || !CFG.targetOrigin) return;   // no broadcast without explicit opt-in + origin
+    if (window.parent === window) return;
+    var payload = {
+      source: 'notionwidgets',
+      widget: 'sketch-canvas',
+      action: action,
+      strokeCount: strokes.length,
+      strokes: strokes
+    };
+    if (blob) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        payload.png = fr.result;
+        try { window.parent.postMessage(payload, CFG.targetOrigin); } catch (_) {}
+      };
+      fr.readAsDataURL(blob);
+    } else {
+      try { window.parent.postMessage(payload, CFG.targetOrigin); } catch (_) {}
+    }
+  }
+
+  /* ============================================================
+     8. BOOT
+     ============================================================ */
+  resize();
+  syncButtons();
+
+  var rt;
+  window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(resize, 120); });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    var onScheme = function () {
+      drawBackground();
+      syncAccentText();
+      /* When the palette is ours, "ink" follows the theme — repaint the swatch and
+         re-map strokes already drawn in the old ink so nothing vanishes. */
+      if (!usingDefaultColors) return;
+      var oldInk = CFG.colors[0];
+      var newInk = cssVarHex('--ink', oldInk);
+      if (newInk === oldInk) return;
+      CFG.colors[0] = newInk;
+      var first = swWrap.querySelector('.sw');
+      if (first) first.style.background = newInk;
+      if (currentColor === oldInk) currentColor = newInk;
+      for (var i = 0; i < strokes.length; i++) if (strokes[i].c === oldInk) strokes[i].c = newInk;
+      redrawInk();
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onScheme);
+    else if (mq.addListener) mq.addListener(onScheme);
+  }
+
+  window.addEventListener('keydown', function (e) {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undoBtn.click(); }
+    else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') { e.preventDefault(); redoBtn.click(); }
+  });
+
+  /* expose for the headless test harness */
+  window.__sketch = {
+    cfg: CFG,
+    strokes: function () { return strokes; },
+    redraw: redrawInk
+  };
+})();
+</script>
+</body>
+</html>

@@ -50,8 +50,17 @@ Collection of embeddable Notion widgets and workspace visualization tools. Inclu
 | 020 | P1 | closed | Workspace map dagre.layout() crashes if CDN blocked | Fixed: added window.dagre guard |
 | 021 | P2 | closed | parseInt calls missing radix parameter | Fixed: added base-10 radix |
 | 022 | P2 | closed | client-approval config.round not sanitized | Fixed: parseInt + clamp |
+| 023 | P1 | closed | pen-probe scroll verdict auto-passes cross-origin (fake green in Notion) | Fixed: gate verdict on canMeasureScroll (same-origin/top-level only), else neutral manual-judgment state |
+| 024 | P2 | closed | pen-probe "sample rate" counts pointermove events, undercounts Pencil Hz | Fixed: sum getCoalescedEvents() samples over the 1s window |
+| 025 | P2 | closed | pen-probe a11y: user-scalable=no, no live region, unlabeled canvas | Fixed: removed zoom lock, added role=status/aria-live, canvas aria-label |
+| 026 | P1 | closed | sketch-canvas touch-action:none defeats "finger scrolls" in input=auto | Fixed: relax to touch-action:pan-y in auto mode (pen still preventDefaults) |
+| 027 | P1 | closed | sketch-canvas emit() posts strokes+PNG to '*' on every action, ignores save=0 | Fixed: opt-in on save=1 only, post to explicit targetOrigin param, never wildcard |
+| 028 | P2 | closed | sketch-canvas iPad clipboard paste fails (async ClipboardItem loses activation) | Fixed: construct ClipboardItem synchronously in gesture with a Blob promise |
+| 029 | P2 | closed | sketch-canvas a11y: user-scalable=no, icon-only buttons unlabeled, unlabeled canvas | Fixed: removed zoom lock, added aria-labels + aria-hidden on decorative bg canvas |
+| 030 | P3 | closed | sketch-canvas SIZE_STEPS could exceed size max 24; getBoundingClientRect per coalesced sample | Fixed: clamped max step to 24, cache stage rect once per pointermove |
 
 ## Session Log
 
 [2026-03-18] [NotionWidgets] [docs] Add AGENTS baseline
 [2026-03-31] [NotionWidgets] [audit] Full 6-file publish-readiness audit — 22 issues identified and fixed
+[2026-07-28] [NotionWidgets] [feasibility] Add pen-probe.html + sketch-canvas.html for Apple Pencil iPad probe; fixed 8 review issues (023-030) incl. probe false-pass and auto-mode scroll suppression; not yet linked from index.html pending on-device verification

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pen Probe — NotionWidgets Feasibility Diagnostic</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg:        #0e0f13;
+    --surface:   #171922;
+    --surface-2: #1f222e;
+    --line:      #2b2f3d;
+    --text:      #e9ecf4;
+    --muted:     #8b93a7;
+    --accent:    #6ee7b7;
+    --warn:      #fbbf24;
+    --bad:       #f87171;
+    --good:      #34d399;
+    --radius:    14px;
+    --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-disp: 'Outfit', var(--font-body);
+    --font-mono: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f6f7fa; --surface:#ffffff; --surface-2:#eef0f6; --line:#dfe3ec;
+      --text:#151823; --muted:#5d6577; --accent:#0f9d6e;
+    }
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.45;
+    padding: 14px;
+    overflow-x: hidden;
+  }
+
+  .head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .head h1 { font-family:var(--font-disp); font-size:16px; font-weight:700; margin:0; letter-spacing:-0.01em; }
+  .head .sub { font-size:12px; color:var(--muted); }
+
+  .pad {
+    position: relative;
+    width: 100%;
+    height: 190px;
+    border-radius: var(--radius);
+    background:
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 24px,
+      var(--surface);
+    border: 1.5px dashed var(--line);
+    touch-action: none;               /* the thing under test */
+    overscroll-behavior: contain;
+    display: grid;
+    place-items: center;
+    margin-bottom: 12px;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+  .pad canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .pad .hint {
+    position: relative;
+    font-family: var(--font-disp);
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    pointer-events: none;
+    padding: 0 20px;
+    transition: opacity .25s ease;
+  }
+  .pad.dirty .hint { opacity: 0; }
+
+  .grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+  .cell {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 11px;
+    min-width: 0;
+  }
+  .cell .k { font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); font-weight:700; }
+  .cell .v { font-family:var(--font-mono); font-size:15px; font-weight:700; margin-top:3px; word-break:break-word; }
+  .cell .v small { font-size:11px; font-weight:400; color:var(--muted); }
+
+  .verdicts { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .verdict {
+    display:flex; align-items:flex-start; gap:9px;
+    background: var(--surface); border:1px solid var(--line);
+    border-radius:10px; padding:10px 12px; font-size:13px;
+  }
+  .verdict .dot { width:9px; height:9px; border-radius:50%; background:var(--muted); flex:none; margin-top:5px; }
+  .verdict.pass .dot { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent); }
+  .verdict.fail .dot { background: var(--bad);  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 22%, transparent); }
+  .verdict.wait .dot { background: var(--warn); }
+  .verdict b { font-weight:700; }
+  .verdict .why { display:block; color:var(--muted); font-size:12px; margin-top:1px; }
+
+  .env { font-family:var(--font-mono); font-size:10.5px; color:var(--muted); background:var(--surface-2);
+         border-radius:10px; padding:9px 11px; word-break:break-all; line-height:1.6; }
+  .env b { color: var(--text); font-weight:700; }
+
+  .bar { display:flex; gap:8px; margin-bottom:12px; }
+  button {
+    flex:1; font-family:var(--font-body); font-weight:700; font-size:12.5px;
+    background:var(--surface-2); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:9px 10px; cursor:pointer; touch-action: manipulation;
+  }
+  button:active { transform: translateY(1px); }
+  .meter { height:5px; border-radius:99px; background:var(--surface-2); overflow:hidden; margin-top:6px; }
+  .meter i { display:block; height:100%; width:0%; background:var(--accent); border-radius:99px; transition: width .05s linear; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>Pen Probe</h1>
+  <span class="sub">Draw on the pad below with the Apple Pencil, then with a finger.</span>
+</div>
+
+<div class="pad" id="pad">
+  <canvas id="cv" role="img" aria-label="Drawing area — draw here with an Apple Pencil or finger"></canvas>
+  <span class="hint" id="hint">Scribble here with the Pencil.<br>Then try to scroll the Notion page by dragging <i>inside</i> this box with a finger.</span>
+</div>
+
+<div class="bar">
+  <button id="reset" type="button">Reset probe</button>
+  <button id="copy" type="button">Copy report</button>
+</div>
+
+<div class="grid">
+  <div class="cell"><div class="k">Pointer type</div><div class="v" id="m-type">—</div></div>
+  <div class="cell"><div class="k">Pressure</div><div class="v" id="m-press">—</div><div class="meter"><i id="m-press-bar"></i></div></div>
+  <div class="cell"><div class="k">Tilt X / Y</div><div class="v" id="m-tilt">—</div></div>
+  <div class="cell"><div class="k">Coalesced / move</div><div class="v" id="m-coal">—</div></div>
+  <div class="cell"><div class="k">Sample rate</div><div class="v" id="m-hz">—</div></div>
+  <div class="cell"><div class="k">Hover events</div><div class="v" id="m-hover">—</div></div>
+</div>
+
+<div class="verdicts" id="verdicts" role="status" aria-live="polite">
+  <div class="verdict wait" data-v="render"><span class="dot"></span><span><b>Embed renders live</b><span class="why">If you can read this inside Notion, this one already passed.</span></span></div>
+  <div class="verdict wait" data-v="pen"><span class="dot"></span><span><b>Pencil reaches the iframe</b><span class="why">Waiting for a <code>pointerType: "pen"</code> event.</span></span></div>
+  <div class="verdict wait" data-v="pressure"><span class="dot"></span><span><b>Real pressure data</b><span class="why">Waiting for a pressure value that isn't 0 or a flat 0.5.</span></span></div>
+  <div class="verdict wait" data-v="coalesced"><span class="dot"></span><span><b>High-frequency sampling</b><span class="why">Waiting for getCoalescedEvents() to return &gt;1 sample.</span></span></div>
+  <div class="verdict wait" data-v="scroll"><span class="dot"></span><span><b>Scroll suppression</b><span class="why">Drag a finger inside the pad. If the Notion page scrolls anyway, this fails.</span></span></div>
+</div>
+
+<div class="env" id="env"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var pad   = document.getElementById('pad');
+  var cv    = document.getElementById('cv');
+  var ctx   = cv.getContext('2d');
+  var hint  = document.getElementById('hint');
+
+  var el = {
+    type:  document.getElementById('m-type'),
+    press: document.getElementById('m-press'),
+    bar:   document.getElementById('m-press-bar'),
+    tilt:  document.getElementById('m-tilt'),
+    coal:  document.getElementById('m-coal'),
+    hz:    document.getElementById('m-hz'),
+    hover: document.getElementById('m-hover'),
+    env:   document.getElementById('env')
+  };
+
+  var state = {
+    sawPen: false,
+    pressures: [],
+    maxCoalesced: 0,
+    hoverCount: 0,
+    moveTimes: [],
+    scrollAtStart: null,
+    types: {}
+  };
+
+  /* Can we actually measure host-page scroll? Only same-origin (or top-level).
+     Inside Notion this is cross-origin, so we must NOT auto-resolve the scroll
+     verdict — a fake green here would defeat the whole point of the probe. */
+  var canMeasureScroll = true;
+  if (window.parent !== window) {
+    try { void window.parent.scrollY; } catch (_) { canMeasureScroll = false; }
+  }
+
+  /* ---------- verdict helpers ---------- */
+  function verdict(name, pass, why) {
+    var node = document.querySelector('.verdict[data-v="' + name + '"]');
+    if (!node) return;
+    node.classList.remove('wait', 'pass', 'fail');
+    node.classList.add(pass ? 'pass' : 'fail');
+    if (why) {
+      var w = node.querySelector('.why');
+      w.textContent = why;               // textContent only — never innerHTML
+    }
+  }
+  verdict('render', true, 'This page is running live inside its frame.');
+
+  /* ---------- canvas sizing ---------- */
+  var DPR = Math.min(window.devicePixelRatio || 1, 3);
+  function resize() {
+    var r = pad.getBoundingClientRect();
+    cv.width  = Math.max(1, Math.round(r.width  * DPR));
+    cv.height = Math.max(1, Math.round(r.height * DPR));
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function pt(e) {
+    var r = pad.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * DPR, y: (e.clientY - r.top) * DPR };
+  }
+
+  /* ---------- drawing ---------- */
+  var drawing = false;
+  var last = null;
+
+  function accentColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#6ee7b7';
+  }
+
+  function segment(a, b, pressure) {
+    ctx.strokeStyle = accentColor();
+    ctx.lineWidth = Math.max(0.8, (1 + 13 * pressure) * DPR);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  function readPressure(e) {
+    if (e.pointerType === 'pen') return e.pressure;
+    return e.pressure > 0 ? e.pressure : 0.5;
+  }
+
+  function updateReadout(e, coalescedCount) {
+    state.types[e.pointerType] = true;
+    el.type.textContent = Object.keys(state.types).join(' · ');
+
+    var p = readPressure(e);
+    el.press.textContent = p.toFixed(3);
+    el.bar.style.width = Math.round(Math.max(0, Math.min(1, p)) * 100) + '%';
+
+    var tx = (typeof e.tiltX === 'number') ? e.tiltX : 0;
+    var ty = (typeof e.tiltY === 'number') ? e.tiltY : 0;
+    el.tilt.textContent = tx + '° / ' + ty + '°';
+
+    if (coalescedCount != null) {
+      state.maxCoalesced = Math.max(state.maxCoalesced, coalescedCount);
+      el.coal.textContent = coalescedCount + ' ';
+      var s = document.createElement('small');
+      s.textContent = '(max ' + state.maxCoalesced + ')';
+      el.coal.appendChild(s);
+    }
+
+    /* true input sample rate over a rolling 1s window — count coalesced samples,
+       not pointermove events, or we undercount high-frequency Pencil input */
+    var now = (typeof performance !== 'undefined' ? performance.now() : 0);
+    var samples = (coalescedCount != null) ? coalescedCount : 1;
+    state.moveTimes.push({ t: now, n: samples });
+    while (state.moveTimes.length && now - state.moveTimes[0].t > 1000) state.moveTimes.shift();
+    var totalSamples = 0;
+    for (var j = 0; j < state.moveTimes.length; j++) totalSamples += state.moveTimes[j].n;
+    if (state.moveTimes.length > 2) el.hz.textContent = totalSamples + ' Hz';
+
+    /* verdicts */
+    if (e.pointerType === 'pen' && !state.sawPen) {
+      state.sawPen = true;
+      verdict('pen', true, 'Apple Pencil input is reaching this iframe as pointerType "pen".');
+    }
+    if (e.pointerType === 'pen') {
+      state.pressures.push(p);
+      if (state.pressures.length > 12) {
+        var uniq = {};
+        for (var i = 0; i < state.pressures.length; i++) uniq[state.pressures[i].toFixed(3)] = true;
+        var n = Object.keys(uniq).length;
+        if (n > 3) verdict('pressure', true, n + ' distinct pressure values seen — real force data, not a stub.');
+      }
+    }
+    if (state.maxCoalesced > 1) {
+      verdict('coalesced', true, 'getCoalescedEvents() returned up to ' + state.maxCoalesced + ' samples per move — smooth strokes are possible.');
+    }
+  }
+
+  /* ---------- pointer handlers ---------- */
+  pad.addEventListener('pointerdown', function (e) {
+    drawing = true;
+    pad.classList.add('dirty');
+    try { pad.setPointerCapture(e.pointerId); } catch (_) {}
+    last = pt(e);
+
+    /* record the outer scroll position so we can tell if a finger drag scrolled the host page */
+    if (e.pointerType === 'touch' && canMeasureScroll) {
+      state.scrollAtStart = outerScroll();
+    }
+
+    var p = readPressure(e);
+    ctx.fillStyle = accentColor();
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, Math.max(0.6, (1 + 13 * p) * DPR / 2), 0, Math.PI * 2);
+    ctx.fill();
+
+    updateReadout(e, null);
+    e.preventDefault();
+  }, { passive: false });
+
+  pad.addEventListener('pointermove', function (e) {
+    if (!drawing) {
+      /* hover — Apple Pencil 2 / Pro hover over M2+ iPads */
+      if (e.pointerType === 'pen') {
+        state.hoverCount++;
+        el.hover.textContent = state.hoverCount + ' ';
+        var sm = document.createElement('small');
+        sm.textContent = '(hover supported)';
+        el.hover.appendChild(sm);
+      }
+      return;
+    }
+
+    var events = (typeof e.getCoalescedEvents === 'function') ? e.getCoalescedEvents() : [e];
+    if (!events || !events.length) events = [e];
+
+    for (var i = 0; i < events.length; i++) {
+      var ev = events[i];
+      var cur = pt(ev);
+      segment(last, cur, readPressure(ev));
+      last = cur;
+    }
+    updateReadout(e, events.length);
+    e.preventDefault();
+  }, { passive: false });
+
+  function end(e) {
+    if (!drawing) return;
+    drawing = false;
+    last = null;
+
+    if (e && e.pointerType === 'touch' && canMeasureScroll && state.scrollAtStart !== null) {
+      var now = outerScroll();
+      var moved = (now === null || state.scrollAtStart === null) ? null : Math.abs(now - state.scrollAtStart) > 4;
+      if (moved === true) {
+        verdict('scroll', false, 'The host page scrolled during a finger drag inside the pad. touch-action:none is NOT winning against the native scroll view.');
+      } else if (moved === false) {
+        verdict('scroll', true, 'Finger drag inside the pad did not scroll the host page. touch-action:none holds.');
+      }
+    }
+  }
+  pad.addEventListener('pointerup', end);
+  pad.addEventListener('pointercancel', end);
+  pad.addEventListener('pointerleave', end);
+
+  /* Reading the parent scroll offset is blocked cross-origin inside Notion.
+     Fall back to asking the user, and to our own window scroll. */
+  function outerScroll() {
+    try {
+      if (window.parent && window.parent !== window) return window.parent.scrollY;
+    } catch (_) { /* cross-origin — expected inside Notion */ }
+    return window.scrollY;
+  }
+
+  /* If we cannot read the parent, say so honestly rather than faking a pass. */
+  var SCROLL_MANUAL_MSG = 'Cross-origin: this probe cannot read Notion’s scroll position. Judge this one with your eyes — drag a finger inside the pad and watch whether the page moves.';
+  function setScrollManualHint() {
+    var node = document.querySelector('.verdict[data-v="scroll"] .why');
+    if (node) node.textContent = SCROLL_MANUAL_MSG;
+  }
+  if (!canMeasureScroll) setScrollManualHint();
+
+  /* ---------- environment ---------- */
+  (function () {
+    var framed = (window.parent !== window);
+    var rows = [
+      ['Framed', framed ? 'yes — inside an iframe' : 'no — top-level window'],
+      ['Viewport', window.innerWidth + ' × ' + window.innerHeight + ' css px'],
+      ['DPR', String(window.devicePixelRatio || 1)],
+      ['PointerEvent', ('PointerEvent' in window) ? 'supported' : 'MISSING'],
+      ['getCoalescedEvents', ('PointerEvent' in window && 'getCoalescedEvents' in PointerEvent.prototype) ? 'supported' : 'MISSING'],
+      ['maxTouchPoints', String(navigator.maxTouchPoints)],
+      ['any-pointer: fine', window.matchMedia('(any-pointer: fine)').matches ? 'yes' : 'no'],
+      ['any-hover: hover', window.matchMedia('(any-hover: hover)').matches ? 'yes' : 'no'],
+      ['UA', navigator.userAgent]
+    ];
+    rows.forEach(function (r) {
+      var b = document.createElement('b');
+      b.textContent = r[0] + ': ';
+      el.env.appendChild(b);
+      el.env.appendChild(document.createTextNode(r[1]));
+      el.env.appendChild(document.createElement('br'));
+    });
+  })();
+
+  /* ---------- buttons ---------- */
+  document.getElementById('reset').addEventListener('click', function () {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    pad.classList.remove('dirty');
+    state.sawPen = false; state.pressures = []; state.maxCoalesced = 0;
+    state.hoverCount = 0; state.moveTimes = []; state.types = {};
+    state.scrollAtStart = null;
+    ['type', 'press', 'tilt', 'coal', 'hz', 'hover'].forEach(function (k) { el[k].textContent = '—'; });
+    el.bar.style.width = '0%';
+    document.querySelectorAll('.verdict').forEach(function (n) {
+      if (n.getAttribute('data-v') === 'render') return;
+      n.classList.remove('pass', 'fail'); n.classList.add('wait');
+    });
+    if (!canMeasureScroll) setScrollManualHint();
+  });
+
+  document.getElementById('copy').addEventListener('click', function () {
+    var lines = [
+      'NotionWidgets — Pen Probe report',
+      'framed: ' + (window.parent !== window),
+      'ua: ' + navigator.userAgent,
+      'viewport: ' + window.innerWidth + 'x' + window.innerHeight + ' @' + (window.devicePixelRatio || 1),
+      'pointer types seen: ' + (Object.keys(state.types).join(', ') || 'none'),
+      'saw pen: ' + state.sawPen,
+      'distinct pen pressures: ' + (function () {
+        var u = {}; state.pressures.forEach(function (p) { u[p.toFixed(3)] = 1; }); return Object.keys(u).length;
+      })(),
+      'max coalesced samples: ' + state.maxCoalesced,
+      'pen hover events: ' + state.hoverCount,
+      'getCoalescedEvents: ' + ('PointerEvent' in window && 'getCoalescedEvents' in PointerEvent.prototype)
+    ].join('\n');
+
+    var btn = this;
+    function done(msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = 'Copy report'; }, 1600); }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lines).then(function () { done('Copied'); }, function () { done('Copy blocked'); });
+    } else {
+      done('Copy blocked');
+    }
+  });
+})();
+</script>
+</body>
+</html>
