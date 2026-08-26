@@ -444,6 +444,41 @@
 
   .error-bar.is-visible { display: flex; }
 
+  /* ─── DECISION RECORD ─── */
+  .decision-record {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--approve-bg);
+    border: 1px solid var(--approve);
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .decision-record.is-visible { display: flex; }
+
+  .decision-record .dr-text { font-family: var(--font-mono); line-height: 1.4; }
+  .decision-record .dr-text strong { color: var(--approve); }
+
+  .decision-record .dr-copy {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+
+  .decision-record .dr-copy:hover { border-color: var(--border-focus); }
+
   *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -502,6 +537,11 @@
     </div>
 
     <div class="error-bar" id="errorBar" role="alert" aria-live="polite"></div>
+
+    <div class="decision-record" id="decisionRecord" role="status" aria-live="polite">
+      <div class="dr-text" id="decisionRecordText"></div>
+      <button class="dr-copy" id="decisionCopyBtn" aria-label="Copy decision summary to clipboard">Copy summary</button>
+    </div>
 
     <div class="submit-row" id="submitRow">
       <button class="submit-btn ghost" id="cancelBtn" aria-label="Cancel this response">Cancel</button>
@@ -723,6 +763,62 @@
 
   if (initErrors.length > 0) showError(initErrors[0]);
 
+  // ─── Durable decision record + reload recovery ─────────────────────────────
+  // postMessage is one-way and has no backend or receiver acknowledgement, so
+  // every submission is also saved in this browser and made copyable for
+  // manual delivery to the team.
+  const decisionRecordEl = document.getElementById('decisionRecord');
+  const decisionRecordText = document.getElementById('decisionRecordText');
+  const decisionCopyBtn = document.getElementById('decisionCopyBtn');
+  const DECISION_KEY = 'clientApproval:' + config.title + '|' + config.subtitle + '|round' + config.round;
+  const ACTION_LABELS = { approve: 'Approved', revisions: 'Revisions requested', restart: 'Restart requested' };
+
+  function loadDecision() {
+    try {
+      const raw = localStorage.getItem(DECISION_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+
+  function saveDecision(record) {
+    try { localStorage.setItem(DECISION_KEY, JSON.stringify(record)); } catch (_) {}
+  }
+
+  function decisionSummary(record) {
+    return [
+      'Client decision — ' + config.title,
+      config.subtitle,
+      'Round ' + config.round,
+      'Decision: ' + (ACTION_LABELS[record.action] || record.action),
+      record.feedback ? 'Feedback: ' + record.feedback : 'Feedback: (none)',
+      'Deliverables: ' + config.deliverables.map(d => d.name).join(', '),
+      'Submitted: ' + record.timestamp
+    ].join('\n');
+  }
+
+  function renderDecisionRecord() {
+    const record = loadDecision();
+    if (!record) return;
+    const when = new Date(record.timestamp);
+    const whenText = isNaN(when.getTime()) ? String(record.timestamp) : when.toLocaleString();
+    decisionRecordText.textContent = '';
+    const strong = document.createElement('strong');
+    strong.textContent = ACTION_LABELS[record.action] || String(record.action);
+    decisionRecordText.append('Recorded in this browser: ', strong, ' · ' + whenText);
+    decisionRecordEl.classList.add('is-visible');
+  }
+
+  decisionCopyBtn.addEventListener('click', () => {
+    const record = loadDecision();
+    if (!record) { showError('No recorded decision to copy.'); return; }
+    navigator.clipboard.writeText(decisionSummary(record)).then(() => {
+      decisionCopyBtn.textContent = 'Copied ✓';
+      setTimeout(() => { decisionCopyBtn.textContent = 'Copy summary'; }, 2000);
+    }).catch(() => showError('Copy failed — clipboard unavailable in this embed.'));
+  });
+
+  renderDecisionRecord();
+
   const submitBtn = document.getElementById('submitBtn');
   function setSubmitPending(isPending) {
     submitInFlight = isPending;
@@ -734,9 +830,10 @@
   }
 
   function getSafeTargetOrigin() {
+    // Wildcard '*' is never allowed — an explicit https origin is required so
+    // the decision payload can only reach the intended embedding page.
     const raw = (P.get('targetOrigin') || '').trim();
-    if (!raw) return null;
-    if (raw === '*') return '*';
+    if (!raw || raw === '*') return null;
 
     try {
       return new URL(raw).origin;
@@ -788,18 +885,21 @@
       return;
     }
 
+    saveDecision({ action: selectedAction, feedback: feedback, timestamp: payload.timestamp });
+    renderDecisionRecord();
+
     const overlay = document.getElementById('successOverlay');
     const iconMap = { approve: '✅', revisions: '✏️', restart: '↩️' };
-    const textMap = { approve: 'Approved!', revisions: 'Revision Request Sent', restart: 'Restart Requested' };
+    const textMap = { approve: 'Approval Recorded', revisions: 'Revision Request Recorded', restart: 'Restart Request Recorded' };
     const subMap = {
-      approve: 'Great — the team will proceed to next phase',
-      revisions: 'The team has been notified of your notes',
-      restart: 'The team will restart this deliverable'
+      approve: 'Posted to the embedding page and saved in this browser — use Copy summary to confirm with the team',
+      revisions: 'Your notes were posted to the embedding page and saved in this browser — use Copy summary to confirm with the team',
+      restart: 'Posted to the embedding page and saved in this browser — use Copy summary to confirm with the team'
     };
 
     document.getElementById('successIcon').textContent = iconMap[selectedAction] || '✅';
-    document.getElementById('successText').textContent = textMap[selectedAction] || 'Response Sent';
-    document.getElementById('successSub').textContent = subMap[selectedAction] || 'Your response has been sent';
+    document.getElementById('successText').textContent = textMap[selectedAction] || 'Response Recorded';
+    document.getElementById('successSub').textContent = subMap[selectedAction] || 'Saved in this browser — confirm delivery with the team';
     overlay.classList.add('is-visible');
 
     setTimeout(() => {
