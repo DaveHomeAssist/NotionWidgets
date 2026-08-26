@@ -62,6 +62,8 @@ Collection of embeddable Notion widgets and workspace visualization tools. Inclu
 | 032 | P1 | closed | client-approval success overlay claimed team notification despite one-way postMessage with no receiver | Fixed: honest overlay copy; decision saved to localStorage with reload recovery and Copy summary for manual delivery (audit H-2) |
 | 033 | P1 | closed | index.html + graph-explorer copy claimed live Notion workspace graph but widget ships demo architecture data | Fixed: copy now states demo data with nodes/edges URL params (audit H-3) |
 | 034 | P1 | closed | client-approval targetOrigin=* wildcard let any embedding origin capture decision payloads | Fixed: getSafeTargetOrigin rejects '*'; explicit origin required (audit M-1) |
+| 035 | P1 | closed | "No data leaves your browser" claim false: URL params reach GitHub Pages, public dataset carried 24 live Notion page IDs | Fixed: honest data-boundary copy in index.html + README, scrubbed notion.so URLs from workspace dataset (audit M-2; IDs remain in git history) |
+| 036 | P1 | closed | Legacy Pages published every push with no test or review gate | Fixed: CI static checks (JSON, HTML sanity, internal links, notion.so guard) gate a workflow-based Pages deploy; build_type switched to workflow (audit M-3) |
 
 ## Session Log
 
@@ -69,3 +71,4 @@ Collection of embeddable Notion widgets and workspace visualization tools. Inclu
 [2026-03-31] [NotionWidgets] [audit] Full 6-file publish-readiness audit — 22 issues identified and fixed
 [2026-07-28] [NotionWidgets] [feasibility] Add pen-probe.html + sketch-canvas.html for Apple Pencil iPad probe; fixed 8 review issues (023-030) incl. probe false-pass and auto-mode scroll suppression; not yet linked from index.html pending on-device verification
 [2026-08-26] [NotionWidgets] [audit-fix] Fix 2026-08-24 audit findings H-1/H-2/H-3/M-1 (issues 031-034): graph-explorer TDZ crash, durable client-approval decision record with honest messaging, truthful graph-explorer copy, reject wildcard targetOrigin
+[2026-08-26] [NotionWidgets] [audit-fix] Fix 2026-08-24 audit findings M-2/M-3 (issues 035-036): scrub Notion page IDs from workspace dataset, honest URL data-boundary copy in index + README, add scripts/check-site.mjs and CI-gated workflow Pages deploy
