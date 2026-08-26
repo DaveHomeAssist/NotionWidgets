@@ -58,9 +58,14 @@ Collection of embeddable Notion widgets and workspace visualization tools. Inclu
 | 028 | P2 | closed | sketch-canvas iPad clipboard paste fails (async ClipboardItem loses activation) | Fixed: construct ClipboardItem synchronously in gesture with a Blob promise |
 | 029 | P2 | closed | sketch-canvas a11y: user-scalable=no, icon-only buttons unlabeled, unlabeled canvas | Fixed: removed zoom lock, added aria-labels + aria-hidden on decorative bg canvas |
 | 030 | P3 | closed | sketch-canvas SIZE_STEPS could exceed size max 24; getBoundingClientRect per coalesced sample | Fixed: clamped max step to 24, cache stage rect once per pointermove |
+| 031 | P0 | closed | graph-explorer crashes on load: layers derived from nodes before initialization (TDZ) | Fixed: moved layer palette derivation below nodes/edges parse (audit H-1) |
+| 032 | P1 | closed | client-approval success overlay claimed team notification despite one-way postMessage with no receiver | Fixed: honest overlay copy; decision saved to localStorage with reload recovery and Copy summary for manual delivery (audit H-2) |
+| 033 | P1 | closed | index.html + graph-explorer copy claimed live Notion workspace graph but widget ships demo architecture data | Fixed: copy now states demo data with nodes/edges URL params (audit H-3) |
+| 034 | P1 | closed | client-approval targetOrigin=* wildcard let any embedding origin capture decision payloads | Fixed: getSafeTargetOrigin rejects '*'; explicit origin required (audit M-1) |
 
 ## Session Log
 
 [2026-03-18] [NotionWidgets] [docs] Add AGENTS baseline
 [2026-03-31] [NotionWidgets] [audit] Full 6-file publish-readiness audit — 22 issues identified and fixed
 [2026-07-28] [NotionWidgets] [feasibility] Add pen-probe.html + sketch-canvas.html for Apple Pencil iPad probe; fixed 8 review issues (023-030) incl. probe false-pass and auto-mode scroll suppression; not yet linked from index.html pending on-device verification
+[2026-08-26] [NotionWidgets] [audit-fix] Fix 2026-08-24 audit findings H-1/H-2/H-3/M-1 (issues 031-034): graph-explorer TDZ crash, durable client-approval decision record with honest messaging, truthful graph-explorer copy, reject wildcard targetOrigin
