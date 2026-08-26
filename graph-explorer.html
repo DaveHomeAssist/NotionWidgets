@@ -191,7 +191,7 @@
     <div>
       <div class="eyebrow">🗂 Graph Explorer · Interactive Node Map</div>
       <h1>Workspace Topology</h1>
-      <p>Auto-layout graph of your actual Notion structure. Pan &amp; zoom the canvas. Click any node to inspect — or click again to focus its dependency tree.</p>
+      <p>Auto-layout graph explorer, shown here with demo architecture data. Pass your own graph via <code>?nodes=</code> and <code>?edges=</code> URL params. Pan &amp; zoom the canvas. Click any node to inspect — or click again to focus its dependency tree.</p>
     </div>
     <div class="hero-stats" id="heroStats"></div>
   </header>
@@ -228,7 +228,7 @@
         </div>
       </div>
       <div class="map-wrap" id="mapWrap">
-        <svg id="map" role="img" aria-label="Notion workspace system map">
+        <svg id="map" role="img" aria-label="Interactive graph explorer node map">
           <defs>
             <marker id="arr" viewBox="0 -4 8 8" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
               <path d="M0,-4L8,0L0,4" fill="rgba(120,145,190,0.4)"/>
@@ -259,13 +259,6 @@
 /* ═══════════════════════════════════════════════
    DATA
 ═══════════════════════════════════════════════ */
-/* Derive layer colors from data — assign from a palette */
-const LAYER_PALETTE = ['#818cf8','#38bdf8','#34d399','#fb923c','#facc15','#a78bfa','#f472b6','#94a3b8','#ef4444','#22d3ee'];
-const layers = {};
-[...new Set(nodes.map(n => n.layer))].forEach((name, i) => {
-  layers[name] = LAYER_PALETTE[i % LAYER_PALETTE.length];
-});
-
 const NW = 220, NH = 88;
 
 /* ═══════════════════════════════════════════════
@@ -342,6 +335,13 @@ function parseJsonParam(key, fallback) {
 
 const nodes = parseJsonParam('nodes', DEMO_NODES);
 const edges = parseJsonParam('edges', DEMO_EDGES);
+
+/* Derive layer colors from data — assign from a palette */
+const LAYER_PALETTE = ['#818cf8','#38bdf8','#34d399','#fb923c','#facc15','#a78bfa','#f472b6','#94a3b8','#ef4444','#22d3ee'];
+const layers = {};
+[...new Set(nodes.map(n => n.layer))].forEach((name, i) => {
+  layers[name] = LAYER_PALETTE[i % LAYER_PALETTE.length];
+});
 
 /* ═══════════════════════════════════════════════
    PRECOMPUTE
