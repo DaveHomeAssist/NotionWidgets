@@ -53,6 +53,14 @@ Widgets are optional enhancements. The surrounding Notion system should still wo
 - User content is inserted with safe DOM APIs, not `innerHTML`.
 - Widgets do not require API keys or a server.
 
+## Data boundary
+
+Widget code stores nothing server-side, but "local-only" is not the whole story:
+
+- Configuration travels in the URL. Project names, client names, task labels, and every other param are part of the request GitHub Pages receives, and the URL persists wherever it is saved — the Notion embed block, browser history, shared links, and hosting logs.
+- Treat everything in a widget URL as public. Only encode data you would be comfortable showing to anyone who can see the Notion page or the link.
+- Datasets under `maps/` are published in this public repository and its Pages deployment. They must contain only data intended to be public — no live Notion page identifiers, credentials, or private URLs.
+
 ## Widget contracts
 
 ### Project Status Dashboard
