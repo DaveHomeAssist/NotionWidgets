@@ -6,14 +6,23 @@
 //   2. maps/manifest.json ids each have dataset.json + presentation.json on disk.
 //   3. Public-data guard (audit M-2): no live Notion page URLs in published datasets.
 //   4. Every root widget HTML has a doctype, a <title>, and a closing </html>.
-//   5. Every local href/src referenced by root HTML files resolves to a real file.
+//   5. Every local href/src referenced by root HTML files resolves to a real file
+//      that the Pages deploy actually publishes (deploy excludes _* and .* paths).
+//   6. Every maps/*/dataset.json satisfies the canonical graph contract in
+//      engine/validate.js (unique ids, edges reference known nodes, schema version).
 
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateDataset } from "../engine/validate.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
+
+// Mirrors the rsync exclusions in .github/workflows/ci.yml deploy job.
+function isExcludedFromDeploy(relPath) {
+  return relPath.split("/").some((seg) => seg.startsWith("_") || seg.startsWith("."));
+}
 
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -43,6 +52,20 @@ for (const file of mapJsonFiles) {
   if (/notion\.so\//i.test(raw) || /notion\.site\//i.test(raw)) {
     errors.push(`${rel}: contains a Notion page URL — published datasets must not carry live workspace identifiers`);
   }
+}
+
+// 6. Datasets must satisfy the canonical graph contract, not just parse.
+for (const file of mapJsonFiles.filter((f) => f.endsWith("/dataset.json"))) {
+  const rel = file.slice(root.length + 1);
+  let data;
+  try {
+    data = JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    continue; // parse failure already reported above
+  }
+  const result = validateDataset(data);
+  for (const err of result.errors) errors.push(`${rel}: schema: ${err}`);
+  for (const warn of result.warnings) console.warn(`  warn ${rel}: ${warn}`);
 }
 
 // 2. Manifest ids must map to complete dataset directories.
@@ -81,6 +104,8 @@ for (const file of htmlFiles) {
     if (!localPath) continue;
     if (!existsSync(join(root, localPath))) {
       errors.push(`${file}: local reference "${target}" does not resolve to a file`);
+    } else if (isExcludedFromDeploy(localPath)) {
+      errors.push(`${file}: local reference "${target}" exists in the repo but is excluded from the Pages deploy`);
     }
   }
 }
