@@ -329,12 +329,53 @@ const DEMO_EDGES = [
 function parseJsonParam(key, fallback) {
   const raw = P.get(key);
   if (!raw) return fallback;
-  try { return JSON.parse(raw); }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error('expected a JSON array');
+    return parsed;
+  }
   catch { console.warn('Graph Explorer: invalid JSON for "' + key + '", using demo data'); return fallback; }
 }
 
-const nodes = parseJsonParam('nodes', DEMO_NODES);
-const edges = parseJsonParam('edges', DEMO_EDGES);
+/* Normalize input to the internal node/edge shape.
+   Accepts this widget's URL shape ({id,name,layer,type,status,desc,tags} / {s,t,type})
+   and the canonical maps/ dataset contract checked by engine/validate.js
+   ({id,label,type,layer,status,meta:{desc,tags,url}} / {from,to,type}),
+   so a maps/<id>/dataset.json nodes/edges array can be passed as is. */
+const str = v => (typeof v === 'string' ? v : '');
+
+function normalizeNodes(list) {
+  const seen = new Set();
+  return list
+    .filter(n => n && typeof n === 'object' && typeof n.id === 'string' && n.id && !seen.has(n.id) && seen.add(n.id))
+    .map(n => {
+      const meta = n.meta && typeof n.meta === 'object' ? n.meta : {};
+      const tags = Array.isArray(n.tags) ? n.tags : Array.isArray(meta.tags) ? meta.tags : [];
+      return {
+        id: n.id,
+        name: str(n.name) || str(n.label) || n.id,
+        layer: str(n.layer) || 'Unassigned',
+        type: str(n.type) || 'Node',
+        status: str(n.status),
+        desc: str(n.desc) || str(meta.desc),
+        tags: tags.filter(t => typeof t === 'string'),
+        url: str(n.url) || str(meta.url),
+      };
+    });
+}
+
+function normalizeEdges(list, ids) {
+  return list
+    .filter(e => e && typeof e === 'object')
+    .map(e => ({ s: e.s ?? e.from, t: e.t ?? e.to, type: str(e.type) || 'structure' }))
+    .filter(e => ids.has(e.s) && ids.has(e.t));
+}
+
+const urlNodes = normalizeNodes(parseJsonParam('nodes', []));
+const usingDemo = urlNodes.length === 0;
+const nodes = usingDemo ? normalizeNodes(DEMO_NODES) : urlNodes;
+const nodeIdSet = new Set(nodes.map(n => n.id));
+const edges = normalizeEdges(usingDemo ? DEMO_EDGES : parseJsonParam('edges', []), nodeIdSet);
 
 /* Derive layer colors from data — assign from a palette */
 const LAYER_PALETTE = ['#818cf8','#38bdf8','#34d399','#fb923c','#facc15','#a78bfa','#f472b6','#94a3b8','#ef4444','#22d3ee'];
@@ -550,7 +591,7 @@ function renderMap(visIds) {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', `M${x1} ${y1} C${x1} ${my},${x2} ${my},${x2} ${y2}`);
     path.setAttribute('class', `edge ${type}${active ? ' is-active' : ''}`);
-    path.setAttribute('stroke', colMap[type]);
+    path.setAttribute('stroke', colMap[type] || colMap.structure);
     path.setAttribute('marker-end', type === 'data' ? 'url(#arr-data)' : 'url(#arr)');
     edgeGrp.appendChild(path);
   });
