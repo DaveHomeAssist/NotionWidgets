@@ -4,6 +4,10 @@
 
 Inherits root rules from `/Users/daverobertson/Desktop/Code/AGENTS.md`.
 
+## Workspace contract
+
+Read `~/Code/ops-hub/90-governance/WORKSPACE_OPERATING_RULES.md` before project rules, including COMMS (one entry on the shared Agent Communications Page per session).
+
 ## Project Overview
 
 Collection of embeddable Notion widgets and workspace visualization tools. Includes a client approval widget, workspace map, project status board, quest log, and prompt library. Each widget is a self-contained HTML file designed for Notion embed blocks or standalone use.
